@@ -29,17 +29,15 @@ const Index = () => {
             {/* Main Headlines with Premium Typography */}
             <div className="relative max-w-5xl mx-auto">
               <div className="space-y-6">
-                <h1 className="text-4xl md:text-7xl font-light text-gray-900 leading-[1.1] tracking-tight">
+                <h1 className="text-4xl font-light text-gray-900 leading-[1.1] tracking-tight md:text-6xl">
                   Vamos criar o{' '}
                   <span className="relative inline-block">
-                    <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent font-medium">
-                      site institucional
-                    </span>
+                    <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent font-medium">website</span>
                     <div className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-indigo-300 to-purple-300 rounded-full opacity-60"></div>
                   </span>
                 </h1>
                 
-                <h2 className="text-4xl md:text-7xl font-extralight text-gray-800 leading-[1.1] tracking-tight">
+                <h2 className="text-4xl font-extralight text-gray-800 leading-[1.1] tracking-tight my-[8px] md:text-6xl">
                   perfeito para sua{' '}
                   <span className="font-medium text-gray-900">empresa</span>
                 </h2>
@@ -51,8 +49,8 @@ const Index = () => {
             </div>
             
             {/* Subtitle with Modern Typography */}
-            <div className="mt-12 max-w-4xl mx-auto">
-              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed font-light px-4">
+            <div className="mt-12 max-w-4xl py-0 my-[30px] mx">
+              <p className="text-xl text-gray-600 leading-relaxed font-light px-4 md:text-xl my-0">
                 Nossa{' '}
                 <span className="relative">
                   <span className="font-medium text-gray-800">assistente virtual inteligente</span>
@@ -75,7 +73,7 @@ const Index = () => {
 
           {/* Main CTA Card */}
           <div className="text-center max-w-3xl mx-auto mb-16 px-4">
-            <Card className="p-8 md:p-12 bg-white/90 backdrop-blur-md border-0 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-500 relative overflow-hidden">
+            <Card className="p-8 md:p-12 bg-white/90 backdrop-blur-md border-0 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-500 relative overflow-hidden py-[25px]">
               {/* Card Background Pattern */}
               <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50/50 to-purple-50/30 pointer-events-none"></div>
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-full opacity-60"></div>
