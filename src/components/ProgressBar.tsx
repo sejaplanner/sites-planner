@@ -5,9 +5,10 @@ import { Progress } from '@/components/ui/progress';
 interface ProgressBarProps {
   currentBlock: number;
   totalBlocks: number;
+  isCompact?: boolean;
 }
 
-const ProgressBar: React.FC<ProgressBarProps> = ({ currentBlock, totalBlocks }) => {
+const ProgressBar: React.FC<ProgressBarProps> = ({ currentBlock, totalBlocks, isCompact = false }) => {
   const progressPercentage = (currentBlock / totalBlocks) * 100;
   
   const blocks = [
@@ -20,6 +21,22 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentBlock, totalBlocks }) 
     "Contato",
     "Objetivo do Site"
   ];
+
+  if (isCompact) {
+    return (
+      <div className="flex items-center gap-2 flex-1 max-w-xs">
+        <div className="flex-1">
+          <Progress 
+            value={progressPercentage} 
+            className="h-1.5"
+          />
+        </div>
+        <div className="text-xs font-medium text-gray-600 whitespace-nowrap">
+          {currentBlock}/{totalBlocks}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto p-3 md:p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm">

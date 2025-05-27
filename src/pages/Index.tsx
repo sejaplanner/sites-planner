@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import ChatInterface from '@/components/ChatInterface';
 import MobileCarousel from '@/components/MobileCarousel';
+import PrivacyPolicyModal from '@/components/PrivacyPolicyModal';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Building2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { MessageSquare, Building2, Sparkles, CheckCircle2, X } from 'lucide-react';
+import ProgressBar from '@/components/ProgressBar';
 
 const Index = () => {
   const [chatStarted, setChatStarted] = useState(false);
@@ -101,7 +103,12 @@ const Index = () => {
 
           {/* Footer */}
           <div className="text-center mt-8 md:mt-12 text-gray-500 px-4">
-            <p className="text-sm md:text-base">© 2024 Planner - Criamos experiências digitais excepcionais</p>
+            <p className="text-sm md:text-base mb-2">© 2024 Planner - Criamos experiências digitais excepcionais</p>
+            <PrivacyPolicyModal>
+              <button className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors">
+                Política de Privacidade
+              </button>
+            </PrivacyPolicyModal>
           </div>
         </div>
       </div>
@@ -113,23 +120,33 @@ const Index = () => {
       {/* Header do chat */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-3 md:p-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-2 md:gap-3 flex-1">
             <img 
               src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
               alt="Planner Logo" 
-              className="h-8 md:h-10 w-auto"
+              className="h-8 md:h-10 w-auto flex-shrink-0"
             />
-            <div>
+            
+            {/* Barra de progresso compacta no mobile */}
+            <div className="block md:hidden flex-1 mx-2">
+              <ProgressBar currentBlock={1} totalBlocks={8} isCompact={true} />
+            </div>
+            
+            <div className="hidden md:block">
               <p className="text-xs md:text-sm text-gray-600">Assistente de Briefing</p>
             </div>
           </div>
+          
           <Button
             variant="outline"
             onClick={() => setChatStarted(false)}
-            className="text-gray-600 hover:text-gray-800 text-xs md:text-sm px-2 md:px-4 py-1 md:py-2"
+            className="text-gray-600 hover:text-gray-800 flex-shrink-0"
             size="sm"
           >
-            Voltar ao Início
+            <X className="w-4 h-4 md:hidden" />
+            <span className="hidden md:inline text-xs md:text-sm px-2 md:px-4 py-1 md:py-2">
+              Voltar ao Início
+            </span>
           </Button>
         </div>
       </div>

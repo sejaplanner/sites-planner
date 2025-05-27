@@ -8,6 +8,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import MarkdownContent from './MarkdownContent';
 import ProgressBar from './ProgressBar';
+import AudioRecorder from './AudioRecorder';
+import AudioPlayer from './AudioPlayer';
+import ImagePreview from './ImagePreview';
 import { usePersistence } from '@/hooks/usePersistence';
 
 interface Message {
@@ -16,6 +19,7 @@ interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   files?: File[];
+  audioBlob?: Blob;
 }
 
 interface ChatInterfaceProps {
@@ -91,18 +95,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
         // Iniciar nova conversa
         const initialMessage: Message = {
           id: '1',
-          content: `Olá! Eu sou a assistente virtual da **Planner**, e estou aqui para te ajudar a coletar todas as informações necessárias para criarmos um site institucional incrível para sua empresa! 🚀
+          content: `Olá! Sou a assistente virtual da **Planner** e estou aqui para te ajudar a criar um site institucional incrível! 🚀
 
-Este processo será dividido em 8 blocos temáticos para garantir que capturemos todos os detalhes importantes.
+Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
 
-**🔷 BLOCO 1 – Informações de Contato**
-
-Para começar, preciso de algumas informações básicas:
-
-1. **Qual é o seu nome completo?**
-2. **Qual é o seu número de WhatsApp?** (com DDD)
-
-Essas informações nos ajudarão a manter contato e salvar seu progresso caso precise sair e voltar depois.`,
+**Qual é o seu nome?** 😊`,
           role: 'assistant',
           timestamp: new Date()
         };
@@ -124,70 +121,66 @@ Essas informações nos ajudarão a manter contato e salvar seu progresso caso p
     }
   }, [messages, collectedData, currentBlock, isInitialized]);
 
-  const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora e profissional para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
-
-IMPORTANTE: VOCÊ DEVE SEMPRE COMEÇAR COLETANDO O NOME E WHATSAPP DO USUÁRIO PRIMEIRO, antes de qualquer outra informação.
+  const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
 
 INSTRUÇÕES IMPORTANTES:
-- Seja sempre empática, clara e profissional
-- PRIMEIRA PRIORIDADE: Colete nome completo e WhatsApp do usuário antes de tudo
-- Siga rigorosamente a sequência dos 8 blocos de perguntas
-- Insista educadamente quando informações essenciais estiverem ausentes ou vagas
-- Confirme as informações importantes antes de seguir para o próximo bloco
+- Seja sempre empática, natural e conversacional como se fosse uma conversa entre amigos
+- FAÇA UMA PERGUNTA POR VEZ - nunca envie listas ou múltiplas perguntas
+- Use linguagem casual mas profissional, sem ser robótica
+- Confirme as informações importantes de forma natural na conversa
 - Use emojis moderadamente para tornar a conversa mais acolhedora
-- Ao final, agradeça e informe que todos os dados foram salvos corretamente
+- Sempre aguarde a resposta antes de fazer a próxima pergunta
+- Quando necessário, peça esclarecimentos ou mais detalhes sobre pontos importantes
 
-BLOCOS DE PERGUNTAS (siga esta ordem):
+FLUXO DA CONVERSA (uma pergunta por vez):
 
 🔷 BLOCO 1 – Informações de Contato
-- Nome completo do usuário
-- WhatsApp do usuário (com DDD)
+1. Nome completo do usuário
+2. WhatsApp (com DDD)
 
-🔷 BLOCO 2 – Informações Gerais da Empresa
-- Nome da empresa
-- Slogan (se houver)
-- Missão da empresa
-- Visão de futuro
-- Valores que norteiam a empresa
-- Descrição da empresa em poucas palavras
-- Principais diferenciais
+🔷 BLOCO 2 – Informações da Empresa  
+3. Nome da empresa
+4. Conte-me sobre sua empresa em poucas palavras
+5. Qual é a missão da empresa?
+6. Como vocês enxergam o futuro? (visão)
+7. Quais valores são importantes para vocês?
+8. Vocês têm um slogan? 
+9. O que vocês fazem de diferente dos concorrentes?
 
-🔷 BLOCO 3 – Produtos ou Serviços
-- Principais produtos/serviços oferecidos
-- Descrição de cada produto/serviço e público-alvo
-- Produtos/serviços para destacar no site
-- Problemas que os produtos/serviços resolvem
+🔷 BLOCO 3 – Produtos/Serviços
+10. Quais são os principais produtos ou serviços?
+11. Qual produto/serviço vocês mais querem destacar?
+12. Que problemas vocês resolvem para seus clientes?
 
 🔷 BLOCO 4 – Público-Alvo
-- Cliente ideal da empresa
-- Principais dores, desejos ou objetivos do público
-- Diferentes tipos de clientes
+13. Quem é o cliente ideal de vocês?
+14. Quais são as principais dores do seu público?
+15. Vocês atendem diferentes tipos de clientes?
 
-🔷 BLOCO 5 – Prova Social e Autoridade
-- Clientes importantes ou cases de sucesso
-- Depoimentos, avaliações ou resultados
-- Certificações, prêmios ou parcerias
+🔷 BLOCO 5 – Credibilidade
+16. Vocês têm clientes importantes ou cases de sucesso?
+17. Têm depoimentos ou resultados para compartilhar?
+18. Alguma certificação, prêmio ou parceria importante?
 
-🔷 BLOCO 6 – Design e Estilo
-- Estilo visual preferido
-- Sites inspiradores (pedir links)
-- Cores e fontes da identidade visual
-- Logotipo (solicitar arquivo)
-- Outras imagens ou vídeos
+🔷 BLOCO 6 – Visual e Design
+19. Como vocês imaginam o visual do site?
+20. Têm algum site que acham inspirador?
+21. Já têm logo e identidade visual definida?
+22. Que cores representam bem a empresa?
 
-🔷 BLOCO 7 – Contato e Localização
-- Canais de contato para o site
-- Endereço físico e mapa
-- Formulário de contato e campos
+🔷 BLOCO 7 – Contato
+23. Como os clientes podem entrar em contato?
+24. Vocês têm endereço físico para mostrar?
+25. Que informações são importantes no formulário de contato?
 
-🔷 BLOCO 8 – Objetivo do Site
-- Principal objetivo do site
-- Principal chamada para ação (CTA)
-- Botão flutuante de WhatsApp ou agendamento
-- Outras informações essenciais
+🔷 BLOCO 8 – Objetivo Final
+26. Qual o principal objetivo do site?
+27. O que vocês querem que o visitante faça no site?
+28. Querem botão de WhatsApp flutuante?
 
-Ao completar todos os blocos, FINALIZE com:
-"✅ Perfeito! Coletei todas as informações necessárias para criarmos um site institucional incrível para sua empresa. Todos os dados foram salvos corretamente em nosso sistema. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada pela sua colaboração! 🎉"`;
+FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada! 🎉"
+
+IMPORTANTE: Nunca faça múltiplas perguntas. Sempre uma por vez, de forma natural e conversacional.`;
 
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
@@ -235,33 +228,80 @@ Ao completar todos os blocos, FINALIZE com:
   };
 
   const detectCurrentBlock = (content: string): number => {
-    if (content.includes('BLOCO 1')) return 1;
-    if (content.includes('BLOCO 2')) return 2;
-    if (content.includes('BLOCO 3')) return 3;
-    if (content.includes('BLOCO 4')) return 4;
-    if (content.includes('BLOCO 5')) return 5;
-    if (content.includes('BLOCO 6')) return 6;
-    if (content.includes('BLOCO 7')) return 7;
-    if (content.includes('BLOCO 8')) return 8;
-    if (content.includes('Todos os dados foram salvos')) return 9;
+    if (content.includes('WhatsApp')) return 1;
+    if (content.includes('missão') || content.includes('empresa')) return 2;
+    if (content.includes('produto') || content.includes('serviço')) return 3;
+    if (content.includes('cliente') || content.includes('público')) return 4;
+    if (content.includes('depoimento') || content.includes('case')) return 5;
+    if (content.includes('visual') || content.includes('design') || content.includes('logo')) return 6;
+    if (content.includes('contato') || content.includes('endereço')) return 7;
+    if (content.includes('objetivo') || content.includes('visitante')) return 8;
+    if (content.includes('Nossa equipe da Planner entrará em contato')) return 9;
     return currentBlock;
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() && files.length === 0) return;
+  const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
+    try {
+      // Converter Blob para base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { audio: base64Audio }
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Erro na transcrição');
+      }
+
+      return data.text || '';
+    } catch (error) {
+      console.error('Erro na transcrição:', error);
+      throw error;
+    }
+  };
+
+  const handleAudioRecorded = async (audioBlob: Blob) => {
+    try {
+      setIsLoading(true);
+      const transcribedText = await transcribeAudio(audioBlob);
+      
+      if (transcribedText.trim()) {
+        setInputValue(transcribedText);
+        // Enviar automaticamente após transcrever
+        await handleSendMessage(transcribedText, [], audioBlob);
+      }
+    } catch (error) {
+      console.error('Erro ao processar áudio:', error);
+      // Adicionar mensagem de erro amigável
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (messageText?: string, messageFiles?: File[], audioBlob?: Blob) => {
+    const textToSend = messageText || inputValue;
+    const filesToSend = messageFiles || files;
+    
+    if (!textToSend.trim() && filesToSend.length === 0 && !audioBlob) return;
 
     let uploadedFileUrls: string[] = [];
     
-    if (files.length > 0) {
-      uploadedFileUrls = await uploadFilesToSupabase(files);
+    if (filesToSend.length > 0) {
+      uploadedFileUrls = await uploadFilesToSupabase(filesToSend);
     }
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: textToSend,
       role: 'user',
       timestamp: new Date(),
-      files: files.length > 0 ? [...files] : undefined
+      files: filesToSend.length > 0 ? [...filesToSend] : undefined,
+      audioBlob: audioBlob
     };
 
     const updatedMessages = [...messages, userMessage];
@@ -275,15 +315,18 @@ Ao completar todos os blocos, FINALIZE com:
         role: msg.role,
         content: msg.content,
         timestamp: msg.timestamp,
-        files: msg.files?.map(f => f.name)
+        files: msg.files?.map(f => f.name),
+        hasAudio: !!msg.audioBlob
       }))
     };
     
     setCollectedData(updatedData);
     await saveDataToSupabase(updatedData);
 
-    setInputValue('');
-    setFiles([]);
+    if (!messageText) {
+      setInputValue('');
+      setFiles([]);
+    }
     setIsLoading(true);
 
     try {
@@ -328,7 +371,7 @@ Ao completar todos os blocos, FINALIZE com:
       setMessages(finalMessages);
 
       // Verificar se a conversa foi finalizada
-      if (assistantResponse.includes('Todos os dados foram salvos corretamente')) {
+      if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
         setIsCompleted(true);
         clearStorage(); // Limpar dados locais quando completado
         
@@ -339,7 +382,8 @@ Ao completar todos os blocos, FINALIZE com:
             role: msg.role,
             content: msg.content,
             timestamp: msg.timestamp,
-            files: msg.files?.map(f => f.name)
+            files: msg.files?.map(f => f.name),
+            hasAudio: !!msg.audioBlob
           }))
         };
         
@@ -354,7 +398,8 @@ Ao completar todos os blocos, FINALIZE com:
             role: msg.role,
             content: msg.content,
             timestamp: msg.timestamp,
-            files: msg.files?.map(f => f.name)
+            files: msg.files?.map(f => f.name),
+            hasAudio: !!msg.audioBlob
           }))
         };
         
@@ -406,8 +451,8 @@ Ao completar todos os blocos, FINALIZE com:
 
   return (
     <div className="h-full flex flex-col">
-      {/* Barra de Progresso */}
-      <div className="p-3 md:p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50">
+      {/* Barra de Progresso - Apenas Desktop */}
+      <div className="hidden md:block p-3 md:p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50">
         <ProgressBar currentBlock={currentBlock} totalBlocks={totalBlocks} />
       </div>
 
@@ -432,16 +477,26 @@ Ao completar todos os blocos, FINALIZE com:
                     <div className="whitespace-pre-wrap">{message.content}</div>
                   )}
                 </div>
+
+                {/* Preview de imagens */}
                 {message.files && message.files.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {message.files.map((file, index) => (
-                      <div key={index} className="flex items-center gap-1 text-xs bg-white/20 rounded px-2 py-1">
-                        <FileImage className="w-3 h-3" />
-                        <span className="truncate max-w-20">{file.name}</span>
-                      </div>
+                      <ImagePreview key={index} file={file} />
                     ))}
                   </div>
                 )}
+
+                {/* Player de áudio */}
+                {message.audioBlob && (
+                  <div className="mt-3">
+                    <AudioPlayer 
+                      audioBlob={message.audioBlob} 
+                      isUserMessage={message.role === 'user'} 
+                    />
+                  </div>
+                )}
+
                 <div className="text-xs opacity-70 mt-2">
                   {message.timestamp.toLocaleTimeString()}
                 </div>
@@ -478,16 +533,12 @@ Ao completar todos os blocos, FINALIZE com:
           {files.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {files.map((file, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 md:px-3 py-1 md:py-2 max-w-48">
-                  <FileImage className="w-4 h-4 text-gray-600 flex-shrink-0" />
-                  <span className="text-xs md:text-sm text-gray-700 truncate">{file.name}</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-gray-400 hover:text-red-500 ml-1 flex-shrink-0"
-                  >
-                    ×
-                  </button>
-                </div>
+                <ImagePreview 
+                  key={index} 
+                  file={file} 
+                  onRemove={() => removeFile(index)}
+                  showRemove={true}
+                />
               ))}
             </div>
           )}
@@ -502,6 +553,8 @@ Ao completar todos os blocos, FINALIZE com:
             >
               <Upload className="w-4 h-4" />
             </Button>
+            
+            <AudioRecorder onAudioRecorded={handleAudioRecorded} />
             
             <Input
               ref={fileInputRef}
@@ -522,7 +575,7 @@ Ao completar todos os blocos, FINALIZE com:
             />
             
             <Button
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               disabled={isLoading || isCompleted || (!inputValue.trim() && files.length === 0)}
               className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10 md:h-10 md:w-10"
               size="icon"

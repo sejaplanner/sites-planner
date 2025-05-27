@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { MessageSquare, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MessageSquare, Sparkles, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MobileCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -33,8 +34,39 @@ const MobileCarousel = () => {
     }
   ];
 
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % cards.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + cards.length) % cards.length);
+  };
+
   return (
-    <div className="md:hidden">
+    <div className="md:hidden relative">
+      {/* Botões de navegação */}
+      <div className="absolute left-2 top-1/2 transform -translate-y-1/2 z-10">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={prevSlide}
+          className="w-8 h-8 bg-white/80 backdrop-blur-sm hover:bg-white/90"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+      </div>
+      
+      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={nextSlide}
+          className="w-8 h-8 bg-white/80 backdrop-blur-sm hover:bg-white/90"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+
       <div className="overflow-hidden">
         <div 
           className="flex transition-transform duration-300 ease-in-out"
@@ -44,12 +76,12 @@ const MobileCarousel = () => {
             const IconComponent = card.icon;
             return (
               <div key={index} className="w-full flex-shrink-0 px-4">
-                <Card className={`p-6 bg-white/70 backdrop-blur-sm ${card.borderColor} hover:shadow-lg transition-all duration-300 h-48`}>
-                  <div className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center mb-4`}>
-                    <IconComponent className={`w-6 h-6 ${card.iconColor}`} />
+                <Card className={`p-4 bg-white/70 backdrop-blur-sm ${card.borderColor} hover:shadow-lg transition-all duration-300 h-44`}>
+                  <div className={`w-10 h-10 ${card.bgColor} rounded-lg flex items-center justify-center mb-3`}>
+                    <IconComponent className={`w-5 h-5 ${card.iconColor}`} />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">{card.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <h3 className="text-base font-semibold text-gray-900 mb-2">{card.title}</h3>
+                  <p className="text-xs text-gray-600 leading-relaxed">
                     {card.description}
                   </p>
                 </Card>
