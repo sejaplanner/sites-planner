@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ChatInterface from '@/components/ChatInterface';
 import { Card } from '@/components/ui/card';
@@ -22,12 +21,11 @@ const Index = () => {
           {/* Header */}
           <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Planner
-              </h1>
+              <img 
+                src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
+                alt="Planner Logo" 
+                className="h-16 w-auto"
+              />
             </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
               Vamos criar o site institucional perfeito para sua empresa
@@ -110,13 +108,12 @@ const Index = () => {
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
+            <img 
+              src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
+              alt="Planner Logo" 
+              className="h-10 w-auto"
+            />
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Planner
-              </h1>
               <p className="text-sm text-gray-600">Assistente de Briefing</p>
             </div>
           </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Upload, FileImage, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
+import MarkdownContent from './MarkdownContent';
+import ProgressBar from './ProgressBar';
 
 interface Message {
   id: string;
@@ -55,6 +56,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     conversation_log: [],
     uploaded_files: []
   });
+  const [currentBlock, setCurrentBlock] = useState(1);
+  const totalBlocks = 8;
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -190,6 +193,19 @@ Ao completar todos os blocos, FINALIZE com:
     }
   };
 
+  const detectCurrentBlock = (content: string): number => {
+    if (content.includes('BLOCO 1')) return 1;
+    if (content.includes('BLOCO 2')) return 2;
+    if (content.includes('BLOCO 3')) return 3;
+    if (content.includes('BLOCO 4')) return 4;
+    if (content.includes('BLOCO 5')) return 5;
+    if (content.includes('BLOCO 6')) return 6;
+    if (content.includes('BLOCO 7')) return 7;
+    if (content.includes('BLOCO 8')) return 8;
+    if (content.includes('Todos os dados foram salvos')) return 9;
+    return currentBlock;
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() && files.length === 0) return;
 
@@ -255,6 +271,10 @@ Ao completar todos os blocos, FINALIZE com:
       }
 
       const assistantResponse = responseData.message;
+
+      // Detectar bloco atual baseado na resposta
+      const detectedBlock = detectCurrentBlock(assistantResponse);
+      setCurrentBlock(detectedBlock);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -333,6 +353,11 @@ Ao completar todos os blocos, FINALIZE com:
 
   return (
     <div className="h-full flex flex-col">
+      {/* Barra de Progresso */}
+      <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50">
+        <ProgressBar currentBlock={currentBlock} totalBlocks={totalBlocks} />
+      </div>
+
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
           {messages.map((message) => (
@@ -347,8 +372,12 @@ Ao completar todos os blocos, FINALIZE com:
                     : 'bg-white border-gray-200 shadow-sm'
                 }`}
               >
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {message.content}
+                <div className="text-sm leading-relaxed">
+                  {message.role === 'assistant' ? (
+                    <MarkdownContent content={message.content} />
+                  ) : (
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                  )}
                 </div>
                 {message.files && message.files.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
