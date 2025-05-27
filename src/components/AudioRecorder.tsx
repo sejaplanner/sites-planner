@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 
 interface AudioRecorderProps {
   onAudioRecorded: (audioBlob: Blob) => void;
+  disabled?: boolean;
 }
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled = false }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -16,6 +17,8 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded }) => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startRecording = async () => {
+    if (disabled) return;
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -147,6 +150,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded }) => {
       size="icon"
       onClick={startRecording}
       className="h-10 w-10"
+      disabled={disabled}
     >
       <Mic className="w-4 h-4" />
     </Button>
