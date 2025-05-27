@@ -49,8 +49,8 @@ const Index = () => {
             </div>
             
             {/* Subtitle with Modern Typography */}
-            <div className="mt-12 max-w-4xl py-0 my-[30px] mx">
-              <p className="text-xl text-gray-600 leading-relaxed font-light px-4 md:text-xl my-0">
+            <div className="mt-12 max-w-4xl py-0 mx my-[34px] mx-[54px]">
+              <p className="text-xl text-gray-600 leading-relaxed font-light md:text-xl my-[5px] px-0 text-center mx-[22px]">
                 Nossa{' '}
                 <span className="relative">
                   <span className="font-medium text-gray-800">assistente virtual inteligente</span>
