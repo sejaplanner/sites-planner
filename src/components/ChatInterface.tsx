@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Upload, FileImage, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -121,66 +120,65 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
     }
   }, [messages, collectedData, currentBlock, isInitialized]);
 
+  // Updated system prompt for more fluid conversation and proactive data collection
   const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
 
 INSTRUÇÕES IMPORTANTES:
 - Seja sempre empática, natural e conversacional como se fosse uma conversa entre amigos
 - FAÇA UMA PERGUNTA POR VEZ - nunca envie listas ou múltiplas perguntas
 - Use linguagem casual mas profissional, sem ser robótica
-- Confirme as informações importantes de forma natural na conversa
 - Use emojis moderadamente para tornar a conversa mais acolhedora
 - Sempre aguarde a resposta antes de fazer a próxima pergunta
-- Quando necessário, peça esclarecimentos ou mais detalhes sobre pontos importantes
+- SEJA ESTRATÉGICA: Se o usuário mencionar informações que respondem outras perguntas futuras, colete essas informações automaticamente e não precise voltar a perguntá-las
+- Faça perguntas ABERTAS que permitam ao usuário fornecer múltiplas informações de uma vez
+- Confirme informações importantes de forma natural na conversa
 
-FLUXO DA CONVERSA (uma pergunta por vez):
+EXEMPLO DE PERGUNTA ESTRATÉGICA:
+❌ Ruim: "Qual é o nome da sua empresa?"
+✅ Bom: "Conte-me um pouco sobre sua empresa - qual o nome, o que vocês fazem e há quanto tempo estão no mercado?"
+
+FLUXO DA CONVERSA (colete informações de forma estratégica):
 
 🔷 BLOCO 1 – Informações de Contato
-1. Nome completo do usuário
-2. WhatsApp (com DDD)
+1. Nome completo do usuário e WhatsApp (com DDD)
 
 🔷 BLOCO 2 – Informações da Empresa  
-3. Nome da empresa
-4. Conte-me sobre sua empresa em poucas palavras
-5. Qual é a missão da empresa?
-6. Como vocês enxergam o futuro? (visão)
-7. Quais valores são importantes para vocês?
-8. Vocês têm um slogan? 
-9. O que vocês fazem de diferente dos concorrentes?
+2. Nome da empresa, descrição do negócio, tempo no mercado
+3. Missão, visão e valores da empresa
+4. Slogan (se houver)
+5. Principais diferenciais competitivos
 
 🔷 BLOCO 3 – Produtos/Serviços
-10. Quais são os principais produtos ou serviços?
-11. Qual produto/serviço vocês mais querem destacar?
-12. Que problemas vocês resolvem para seus clientes?
+6. Produtos/serviços oferecidos e principais destaques
+7. Problemas que resolvem para os clientes
 
 🔷 BLOCO 4 – Público-Alvo
-13. Quem é o cliente ideal de vocês?
-14. Quais são as principais dores do seu público?
-15. Vocês atendem diferentes tipos de clientes?
+8. Perfil do cliente ideal e suas principais necessidades
+9. Diferentes segmentos atendidos (se houver)
 
 🔷 BLOCO 5 – Credibilidade
-16. Vocês têm clientes importantes ou cases de sucesso?
-17. Têm depoimentos ou resultados para compartilhar?
-18. Alguma certificação, prêmio ou parceria importante?
+10. Cases de sucesso, depoimentos ou resultados importantes
+11. Certificações, prêmios ou parcerias relevantes
 
 🔷 BLOCO 6 – Visual e Design
-19. Como vocês imaginam o visual do site?
-20. Têm algum site que acham inspirador?
-21. Já têm logo e identidade visual definida?
-22. Que cores representam bem a empresa?
+12. Estilo visual desejado para o site e inspirações
+13. Identidade visual existente (logo, cores, etc.)
 
 🔷 BLOCO 7 – Contato
-23. Como os clientes podem entrar em contato?
-24. Vocês têm endereço físico para mostrar?
-25. Que informações são importantes no formulário de contato?
+14. Formas de contato e localização
+15. Informações importantes para formulário de contato
 
 🔷 BLOCO 8 – Objetivo Final
-26. Qual o principal objetivo do site?
-27. O que vocês querem que o visitante faça no site?
-28. Querem botão de WhatsApp flutuante?
+16. Principal objetivo do site e ação desejada dos visitantes
+17. Funcionalidades específicas (ex: WhatsApp flutuante)
 
-FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada! 🎉"
+ESTRATÉGIA IMPORTANTE: 
+- Se o usuário der uma resposta completa que cubra múltiplas áreas, reconheça todas as informações coletadas
+- Não repita perguntas sobre informações já fornecidas
+- Pule para o próximo tópico necessário
+- Seja eficiente mas mantenha a naturalidade
 
-IMPORTANTE: Nunca faça múltiplas perguntas. Sempre uma por vez, de forma natural e conversacional.`;
+FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada! 🎉"`;
 
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
@@ -271,8 +269,7 @@ IMPORTANTE: Nunca faça múltiplas perguntas. Sempre uma por vez, de forma natur
       const transcribedText = await transcribeAudio(audioBlob);
       
       if (transcribedText.trim()) {
-        setInputValue(transcribedText);
-        // Enviar automaticamente após transcrever
+        // Send the audio message directly without setting inputValue
         await handleSendMessage(transcribedText, [], audioBlob);
       }
     } catch (error) {
@@ -323,10 +320,18 @@ IMPORTANTE: Nunca faça múltiplas perguntas. Sempre uma por vez, de forma natur
     setCollectedData(updatedData);
     await saveDataToSupabase(updatedData);
 
-    if (!messageText) {
+    // Clear inputs only if this wasn't called with specific parameters (audio message)
+    if (!messageText && !audioBlob) {
       setInputValue('');
       setFiles([]);
     }
+    
+    // Clear inputs for regular messages and audio messages
+    if (!messageText || audioBlob) {
+      setInputValue('');
+      setFiles([]);
+    }
+    
     setIsLoading(true);
 
     try {
