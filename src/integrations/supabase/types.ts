@@ -29,6 +29,8 @@ export type Database = {
           target_audience: string | null
           updated_at: string | null
           uploaded_files: string[] | null
+          user_name: string | null
+          user_whatsapp: string | null
           values: string | null
           vision: string | null
           website_objective: string | null
@@ -52,6 +54,8 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string | null
           uploaded_files?: string[] | null
+          user_name?: string | null
+          user_whatsapp?: string | null
           values?: string | null
           vision?: string | null
           website_objective?: string | null
@@ -75,6 +79,8 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string | null
           uploaded_files?: string[] | null
+          user_name?: string | null
+          user_whatsapp?: string | null
           values?: string | null
           vision?: string | null
           website_objective?: string | null

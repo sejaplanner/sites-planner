@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Upload, FileImage, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import MarkdownContent from './MarkdownContent';
 import ProgressBar from './ProgressBar';
+import { usePersistence } from '@/hooks/usePersistence';
 
 interface Message {
   id: string;
@@ -22,6 +24,8 @@ interface ChatInterfaceProps {
 
 interface CollectedData {
   session_id: string;
+  user_name?: string;
+  user_whatsapp?: string;
   company_name?: string;
   slogan?: string;
   mission?: string;
@@ -58,9 +62,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   });
   const [currentBlock, setCurrentBlock] = useState(1);
   const totalBlocks = 8;
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isLoading: persistenceLoading, persistedData, saveToStorage, clearStorage } = usePersistence(sessionId);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -71,25 +77,60 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   }, [messages]);
 
   useEffect(() => {
-    const initialMessage: Message = {
-      id: '1',
-      content: `Olá! Eu sou a assistente virtual da **Planner**, e estou aqui para te ajudar a coletar todas as informações necessárias para criarmos um site institucional incrível para sua empresa! 🚀
+    if (!persistenceLoading && !isInitialized) {
+      if (persistedData && persistedData.messages && persistedData.messages.length > 1) {
+        // Recuperar sessão anterior
+        setMessages(persistedData.messages.map(msg => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        })));
+        setCollectedData(persistedData.collectedData || collectedData);
+        setCurrentBlock(persistedData.currentBlock || 1);
+        console.log('Sessão recuperada:', persistedData);
+      } else {
+        // Iniciar nova conversa
+        const initialMessage: Message = {
+          id: '1',
+          content: `Olá! Eu sou a assistente virtual da **Planner**, e estou aqui para te ajudar a coletar todas as informações necessárias para criarmos um site institucional incrível para sua empresa! 🚀
 
-Este processo será dividido em 8 blocos temáticos para garantir que capturemos todos os detalhes importantes. Vamos começar?
+Este processo será dividido em 8 blocos temáticos para garantir que capturemos todos os detalhes importantes.
 
-**🔷 BLOCO 1 – Informações Gerais da Empresa**
+**🔷 BLOCO 1 – Informações de Contato**
 
-Para começar, me conte: **qual é o nome da sua empresa?**`,
-      role: 'assistant',
-      timestamp: new Date()
-    };
-    setMessages([initialMessage]);
-  }, []);
+Para começar, preciso de algumas informações básicas:
+
+1. **Qual é o seu nome completo?**
+2. **Qual é o seu número de WhatsApp?** (com DDD)
+
+Essas informações nos ajudarão a manter contato e salvar seu progresso caso precise sair e voltar depois.`,
+          role: 'assistant',
+          timestamp: new Date()
+        };
+        setMessages([initialMessage]);
+      }
+      setIsInitialized(true);
+    }
+  }, [persistenceLoading, persistedData, isInitialized]);
+
+  // Salvar progresso automaticamente
+  useEffect(() => {
+    if (isInitialized && messages.length > 0) {
+      saveToStorage({
+        sessionId,
+        messages,
+        collectedData,
+        currentBlock
+      });
+    }
+  }, [messages, collectedData, currentBlock, isInitialized]);
 
   const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora e profissional para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
 
+IMPORTANTE: VOCÊ DEVE SEMPRE COMEÇAR COLETANDO O NOME E WHATSAPP DO USUÁRIO PRIMEIRO, antes de qualquer outra informação.
+
 INSTRUÇÕES IMPORTANTES:
 - Seja sempre empática, clara e profissional
+- PRIMEIRA PRIORIDADE: Colete nome completo e WhatsApp do usuário antes de tudo
 - Siga rigorosamente a sequência dos 8 blocos de perguntas
 - Insista educadamente quando informações essenciais estiverem ausentes ou vagas
 - Confirme as informações importantes antes de seguir para o próximo bloco
@@ -98,7 +139,11 @@ INSTRUÇÕES IMPORTANTES:
 
 BLOCOS DE PERGUNTAS (siga esta ordem):
 
-🔷 BLOCO 1 – Informações Gerais da Empresa
+🔷 BLOCO 1 – Informações de Contato
+- Nome completo do usuário
+- WhatsApp do usuário (com DDD)
+
+🔷 BLOCO 2 – Informações Gerais da Empresa
 - Nome da empresa
 - Slogan (se houver)
 - Missão da empresa
@@ -107,42 +152,38 @@ BLOCOS DE PERGUNTAS (siga esta ordem):
 - Descrição da empresa em poucas palavras
 - Principais diferenciais
 
-🔷 BLOCO 2 – Produtos ou Serviços
+🔷 BLOCO 3 – Produtos ou Serviços
 - Principais produtos/serviços oferecidos
 - Descrição de cada produto/serviço e público-alvo
 - Produtos/serviços para destacar no site
 - Problemas que os produtos/serviços resolvem
 
-🔷 BLOCO 3 – Público-Alvo
+🔷 BLOCO 4 – Público-Alvo
 - Cliente ideal da empresa
 - Principais dores, desejos ou objetivos do público
 - Diferentes tipos de clientes
 
-🔷 BLOCO 4 – Prova Social e Autoridade
+🔷 BLOCO 5 – Prova Social e Autoridade
 - Clientes importantes ou cases de sucesso
 - Depoimentos, avaliações ou resultados
 - Certificações, prêmios ou parcerias
 
-🔷 BLOCO 5 – Design e Estilo
+🔷 BLOCO 6 – Design e Estilo
 - Estilo visual preferido
 - Sites inspiradores (pedir links)
 - Cores e fontes da identidade visual
 - Logotipo (solicitar arquivo)
 - Outras imagens ou vídeos
 
-🔷 BLOCO 6 – Contato e Localização
+🔷 BLOCO 7 – Contato e Localização
 - Canais de contato para o site
 - Endereço físico e mapa
 - Formulário de contato e campos
 
-🔷 BLOCO 7 – Objetivo do Site
+🔷 BLOCO 8 – Objetivo do Site
 - Principal objetivo do site
 - Principal chamada para ação (CTA)
 - Botão flutuante de WhatsApp ou agendamento
-
-🔷 BLOCO 8 – Outras Informações
-- Redes sociais ou blog
-- Domínio e hospedagem existentes
 - Outras informações essenciais
 
 Ao completar todos os blocos, FINALIZE com:
@@ -289,6 +330,7 @@ Ao completar todos os blocos, FINALIZE com:
       // Verificar se a conversa foi finalizada
       if (assistantResponse.includes('Todos os dados foram salvos corretamente')) {
         setIsCompleted(true);
+        clearStorage(); // Limpar dados locais quando completado
         
         const finalData = {
           ...updatedData,
@@ -351,28 +393,39 @@ Ao completar todos os blocos, FINALIZE com:
     }
   };
 
+  if (persistenceLoading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-600">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Carregando...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Barra de Progresso */}
-      <div className="p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50">
+      <div className="p-3 md:p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50">
         <ProgressBar currentBlock={currentBlock} totalBlocks={totalBlocks} />
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4 max-w-4xl mx-auto">
+      <ScrollArea className="flex-1 p-3 md:p-4">
+        <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto">
           {messages.map((message) => (
             <div
               key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <Card
-                className={`max-w-[80%] p-4 ${
+                className={`max-w-[85%] md:max-w-[80%] p-3 md:p-4 ${
                   message.role === 'user'
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
                     : 'bg-white border-gray-200 shadow-sm'
                 }`}
               >
-                <div className="text-sm leading-relaxed">
+                <div className="text-sm md:text-base leading-relaxed">
                   {message.role === 'assistant' ? (
                     <MarkdownContent content={message.content} />
                   ) : (
@@ -384,7 +437,7 @@ Ao completar todos os blocos, FINALIZE com:
                     {message.files.map((file, index) => (
                       <div key={index} className="flex items-center gap-1 text-xs bg-white/20 rounded px-2 py-1">
                         <FileImage className="w-3 h-3" />
-                        {file.name}
+                        <span className="truncate max-w-20">{file.name}</span>
                       </div>
                     ))}
                   </div>
@@ -397,7 +450,7 @@ Ao completar todos os blocos, FINALIZE com:
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <Card className="p-4 bg-gray-50">
+              <Card className="p-3 md:p-4 bg-gray-50">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-sm">Analisando suas informações...</span>
@@ -410,27 +463,27 @@ Ao completar todos os blocos, FINALIZE com:
       </ScrollArea>
 
       {isCompleted && (
-        <div className="p-4 bg-green-50 border-t border-green-200">
+        <div className="p-3 md:p-4 bg-green-50 border-t border-green-200">
           <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto">
             <CheckCircle2 className="w-5 h-5" />
-            <span className="font-medium">
+            <span className="font-medium text-sm md:text-base">
               Briefing finalizado! Dados salvos com sucesso no Supabase (ID: {sessionId})
             </span>
           </div>
         </div>
       )}
 
-      <div className="border-t bg-white p-4">
+      <div className="border-t bg-white p-3 md:p-4">
         <div className="max-w-4xl mx-auto">
           {files.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {files.map((file, index) => (
-                <div key={index} className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
-                  <FileImage className="w-4 h-4 text-gray-600" />
-                  <span className="text-sm text-gray-700">{file.name}</span>
+                <div key={index} className="flex items-center gap-2 bg-gray-100 rounded-lg px-2 md:px-3 py-1 md:py-2 max-w-48">
+                  <FileImage className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                  <span className="text-xs md:text-sm text-gray-700 truncate">{file.name}</span>
                   <button
                     onClick={() => removeFile(index)}
-                    className="text-gray-400 hover:text-red-500 ml-1"
+                    className="text-gray-400 hover:text-red-500 ml-1 flex-shrink-0"
                   >
                     ×
                   </button>
@@ -444,7 +497,7 @@ Ao completar todos os blocos, FINALIZE com:
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0"
+              className="shrink-0 h-10 w-10 md:h-10 md:w-10"
               disabled={isCompleted}
             >
               <Upload className="w-4 h-4" />
@@ -464,14 +517,15 @@ Ao completar todos os blocos, FINALIZE com:
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={isCompleted ? "Briefing finalizado" : "Digite sua resposta..."}
-              className="flex-1"
+              className="flex-1 text-sm md:text-base"
               disabled={isLoading || isCompleted}
             />
             
             <Button
               onClick={handleSendMessage}
               disabled={isLoading || isCompleted || (!inputValue.trim() && files.length === 0)}
-              className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10 md:h-10 md:w-10"
+              size="icon"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
