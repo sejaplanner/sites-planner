@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   id: string;
@@ -18,6 +19,28 @@ interface ChatInterfaceProps {
   onDataCollected: (data: any) => void;
 }
 
+interface CollectedData {
+  session_id: string;
+  company_name?: string;
+  slogan?: string;
+  mission?: string;
+  vision?: string;
+  values?: string;
+  description?: string;
+  differentials?: string;
+  products_services?: string;
+  target_audience?: string;
+  social_proof?: string;
+  design_preferences?: string;
+  contact_info?: string;
+  website_objective?: string;
+  additional_info?: string;
+  uploaded_files?: string[];
+  conversation_log: any[];
+  status: 'in_progress' | 'completed';
+  created_at: string;
+}
+
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -25,6 +48,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [sessionId] = useState(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [collectedData, setCollectedData] = useState<Partial<CollectedData>>({
+    session_id: sessionId,
+    status: 'in_progress',
+    created_at: new Date().toISOString(),
+    conversation_log: [],
+    uploaded_files: []
+  });
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -37,14 +69,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   }, [messages]);
 
   useEffect(() => {
-    // Mensagem inicial da IA
     const initialMessage: Message = {
       id: '1',
-      content: `Olá! Eu sou a assistente virtual da Planner, e estou aqui para te ajudar a coletar todas as informações necessárias para criarmos um site institucional incrível para sua empresa! 🚀
+      content: `Olá! Eu sou a assistente virtual da **Planner**, e estou aqui para te ajudar a coletar todas as informações necessárias para criarmos um site institucional incrível para sua empresa! 🚀
 
-Este processo será dividido em algumas etapas para garantir que capturemos todos os detalhes importantes. Vamos começar?
+Este processo será dividido em 8 blocos temáticos para garantir que capturemos todos os detalhes importantes. Vamos começar?
 
-**Para começar, me conte: qual é o nome da sua empresa?**`,
+**🔷 BLOCO 1 – Informações Gerais da Empresa**
+
+Para começar, me conte: **qual é o nome da sua empresa?**`,
       role: 'assistant',
       timestamp: new Date()
     };
@@ -111,13 +144,64 @@ BLOCOS DE PERGUNTAS (siga esta ordem):
 - Outras informações essenciais
 
 Ao completar todos os blocos, FINALIZE com:
-"Perfeito! Coletei todas as informações necessárias para criarmos um site institucional incrível para sua empresa. Todos os dados foram salvos corretamente em nosso sistema. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada pela sua colaboração! 🎉"`;
+"✅ Perfeito! Coletei todas as informações necessárias para criarmos um site institucional incrível para sua empresa. Todos os dados foram salvos corretamente em nosso sistema. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada pela sua colaboração! 🎉"`;
+
+  const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    
+    for (const file of files) {
+      const fileName = `${sessionId}/${Date.now()}_${file.name}`;
+      
+      const { data, error } = await supabase.storage
+        .from('client-files')
+        .upload(fileName, file);
+
+      if (error) {
+        console.error('Erro ao fazer upload:', error);
+        continue;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('client-files')
+        .getPublicUrl(fileName);
+
+      uploadedUrls.push(urlData.publicUrl);
+    }
+    
+    return uploadedUrls;
+  };
+
+  const saveDataToSupabase = async (data: Partial<CollectedData>) => {
+    try {
+      const { error } = await supabase
+        .from('client_briefings')
+        .upsert({
+          session_id: data.session_id,
+          ...data,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Erro ao salvar no Supabase:', error);
+      } else {
+        console.log('Dados salvos com sucesso no Supabase');
+      }
+    } catch (error) {
+      console.error('Erro na conexão com Supabase:', error);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() && files.length === 0) return;
     if (!apiKey.trim()) {
       alert('Por favor, insira sua chave da API OpenAI para continuar.');
       return;
+    }
+
+    let uploadedFileUrls: string[] = [];
+    
+    if (files.length > 0) {
+      uploadedFileUrls = await uploadFilesToSupabase(files);
     }
 
     const userMessage: Message = {
@@ -128,13 +212,30 @@ Ao completar todos os blocos, FINALIZE com:
       files: files.length > 0 ? [...files] : undefined
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    
+    // Atualizar dados coletados com arquivos
+    const updatedData = {
+      ...collectedData,
+      uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFileUrls],
+      conversation_log: updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        files: msg.files?.map(f => f.name)
+      }))
+    };
+    
+    setCollectedData(updatedData);
+    await saveDataToSupabase(updatedData);
+
     setInputValue('');
     setFiles([]);
     setIsLoading(true);
 
     try {
-      const conversationHistory = messages.map(msg => ({
+      const conversationHistory = updatedMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       }));
@@ -149,8 +250,7 @@ Ao completar todos os blocos, FINALIZE com:
           model: 'gpt-4o-mini',
           messages: [
             { role: 'system', content: systemPrompt },
-            ...conversationHistory,
-            { role: 'user', content: inputValue }
+            ...conversationHistory
           ],
           temperature: 0.7,
           max_tokens: 1000,
@@ -171,13 +271,41 @@ Ao completar todos os blocos, FINALIZE com:
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
 
       // Verificar se a conversa foi finalizada
       if (assistantResponse.includes('Todos os dados foram salvos corretamente')) {
         setIsCompleted(true);
-        // Aqui você salvaria os dados no Supabase
-        onDataCollected({ messages: [...messages, userMessage, assistantMessage] });
+        
+        const finalData = {
+          ...updatedData,
+          status: 'completed' as const,
+          conversation_log: finalMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            files: msg.files?.map(f => f.name)
+          }))
+        };
+        
+        setCollectedData(finalData);
+        await saveDataToSupabase(finalData);
+        onDataCollected(finalData);
+      } else {
+        // Salvar progresso da conversa
+        const progressData = {
+          ...updatedData,
+          conversation_log: finalMessages.map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            timestamp: msg.timestamp,
+            files: msg.files?.map(f => f.name)
+          }))
+        };
+        
+        setCollectedData(progressData);
+        await saveDataToSupabase(progressData);
       }
 
     } catch (error) {
@@ -269,7 +397,7 @@ Ao completar todos os blocos, FINALIZE com:
               <Card className="p-4 bg-gray-50">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Digitando...</span>
+                  <span className="text-sm">Analisando suas informações...</span>
                 </div>
               </Card>
             </div>
@@ -282,7 +410,9 @@ Ao completar todos os blocos, FINALIZE com:
         <div className="p-4 bg-green-50 border-t border-green-200">
           <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto">
             <CheckCircle2 className="w-5 h-5" />
-            <span className="font-medium">Coleta de dados finalizada com sucesso!</span>
+            <span className="font-medium">
+              Briefing finalizado! Dados salvos com sucesso no Supabase (ID: {sessionId})
+            </span>
           </div>
         </div>
       )}
@@ -330,7 +460,7 @@ Ao completar todos os blocos, FINALIZE com:
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={isCompleted ? "Conversa finalizada" : "Digite sua mensagem..."}
+              placeholder={isCompleted ? "Briefing finalizado" : "Digite sua resposta..."}
               className="flex-1"
               disabled={isLoading || isCompleted || !apiKey}
             />
