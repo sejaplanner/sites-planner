@@ -30,18 +30,44 @@ const Index = () => {
                 className="h-12 md:h-16 w-auto"
               />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 px-4">
-              Vamos criar o site institucional perfeito para sua empresa
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-4">
-              Nossa assistente virtual irá conversar com você para entender todos os detalhes da sua empresa 
-              e coletar as informações necessárias para desenvolvermos um site institucional incrível.
-            </p>
+            
+            {/* Títulos principais com design premium */}
+            <div className="relative">
+              <h2 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-700 bg-clip-text text-transparent mb-6 px-4 leading-tight">
+                Vamos criar o site institucional 
+                <span className="block text-4xl md:text-6xl font-black mt-2">
+                  perfeito para sua empresa
+                </span>
+              </h2>
+              
+              {/* Elemento decorativo */}
+              <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-purple-400/20 to-blue-400/20 rounded-full blur-xl"></div>
+              <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-xl"></div>
+            </div>
+            
+            <div className="relative max-w-4xl mx-auto">
+              <p className="text-lg md:text-xl text-gray-700 leading-relaxed px-4 font-medium">
+                Nossa{' '}
+                <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-semibold">
+                  assistente virtual inteligente
+                </span>{' '}
+                irá conversar com você para entender todos os detalhes da sua empresa 
+                e coletar as informações necessárias para desenvolvermos um{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent font-semibold">
+                  site institucional incrível
+                </span>.
+              </p>
+              
+              {/* Linha decorativa */}
+              <div className="mt-6 flex justify-center">
+                <div className="w-24 h-1 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full"></div>
+              </div>
+            </div>
           </div>
 
           {/* Seção de início */}
           <div className="text-center max-w-2xl mx-auto mb-8 md:mb-12 px-4">
-            <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm border-gray-200 shadow-xl">
+            <Card className="p-6 md:p-8 bg-white/80 backdrop-blur-sm border-gray-200 shadow-xl hover:shadow-2xl transition-all duration-300">
               <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
                 Pronto para começar?
               </h3>
@@ -52,7 +78,7 @@ const Index = () => {
               <Button
                 onClick={() => setChatStarted(true)}
                 size="lg"
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 md:px-8 py-3 text-base md:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 md:px-8 py-3 text-base md:text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105"
               >
                 <MessageSquare className="w-5 h-5 mr-2" />
                 Iniciar Conversa
@@ -151,8 +177,8 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Interface do chat */}
-      <div className="h-[calc(100vh-60px)] md:h-[calc(100vh-80px)]">
+      {/* Interface do chat - Ajustada para mobile */}
+      <div className="h-[calc(100vh-60px)] md:h-[calc(100vh-80px)] pb-safe">
         <ChatInterface onDataCollected={handleDataCollected} />
       </div>
     </div>

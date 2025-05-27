@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, FileImage, Loader2, CheckCircle2 } from 'lucide-react';
+import { Send, Upload, FileImage, Loader2, CheckCircle2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -55,6 +55,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluation, setEvaluation] = useState<number>(0);
+  const [evaluationComment, setEvaluationComment] = useState('');
   const [sessionId] = useState(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [collectedData, setCollectedData] = useState<Partial<CollectedData>>({
     session_id: sessionId,
@@ -120,8 +123,13 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
     }
   }, [messages, collectedData, currentBlock, isInitialized]);
 
-  // Updated system prompt for more fluid conversation and proactive data collection
+  // Updated system prompt with mandatory name and WhatsApp collection
   const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
+
+REGRA FUNDAMENTAL - INFORMAÇÕES OBRIGATÓRIAS PRIMEIRO:
+- SEMPRE COMECE coletando o NOME COMPLETO e NÚMERO DO WHATSAPP (com DDD) do usuário
+- NÃO prossiga para outros tópicos até ter essas duas informações essenciais
+- Se o usuário não fornecer nome ou WhatsApp, insista educadamente até obter ambos
 
 INSTRUÇÕES IMPORTANTES:
 - Seja sempre empática, natural e conversacional como se fosse uma conversa entre amigos
@@ -139,8 +147,8 @@ EXEMPLO DE PERGUNTA ESTRATÉGICA:
 
 FLUXO DA CONVERSA (colete informações de forma estratégica):
 
-🔷 BLOCO 1 – Informações de Contato
-1. Nome completo do usuário e WhatsApp (com DDD)
+🔷 BLOCO 1 – Informações de Contato (OBRIGATÓRIO PRIMEIRO)
+1. Nome completo do usuário e WhatsApp (com DDD) - ESSENCIAL
 
 🔷 BLOCO 2 – Informações da Empresa  
 2. Nome da empresa, descrição do negócio, tempo no mercado
@@ -178,7 +186,7 @@ ESTRATÉGIA IMPORTANTE:
 - Pule para o próximo tópico necessário
 - Seja eficiente mas mantenha a naturalidade
 
-FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa equipe da Planner entrará em contato em breve para dar continuidade ao projeto. Muito obrigada! 🎉"`;
+FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
 
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
@@ -280,6 +288,48 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
     }
   };
 
+  const handleEvaluationSubmit = async () => {
+    if (evaluation === 0) return;
+
+    try {
+      const evaluationData = {
+        session_id: sessionId,
+        rating: evaluation,
+        comment: evaluationComment,
+        created_at: new Date().toISOString()
+      };
+
+      // Save evaluation to Supabase
+      const { error } = await supabase
+        .from('client_evaluations')
+        .insert(evaluationData);
+
+      if (error) {
+        console.error('Erro ao salvar avaliação:', error);
+      }
+
+      // Add final message
+      const finalMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        content: `Muito obrigada pela sua avaliação${evaluation >= 4 ? ' excelente' : ''}! ${evaluationComment ? 'Suas sugestões são muito valiosas para nós. ' : ''}
+
+🎉 **Briefing Finalizado com Sucesso!**
+
+Nossa equipe da Planner entrará em contato em breve através do WhatsApp informado para dar continuidade ao desenvolvimento do seu site institucional.
+
+Tenha um excelente dia! 🚀✨`,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, finalMessage]);
+      setIsEvaluating(false);
+
+    } catch (error) {
+      console.error('Erro ao processar avaliação:', error);
+    }
+  };
+
   const handleSendMessage = async (messageText?: string, messageFiles?: File[], audioBlob?: Blob) => {
     const textToSend = messageText || inputValue;
     const filesToSend = messageFiles || files;
@@ -320,17 +370,9 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
     setCollectedData(updatedData);
     await saveDataToSupabase(updatedData);
 
-    // Clear inputs only if this wasn't called with specific parameters (audio message)
-    if (!messageText && !audioBlob) {
-      setInputValue('');
-      setFiles([]);
-    }
-    
-    // Clear inputs for regular messages and audio messages
-    if (!messageText || audioBlob) {
-      setInputValue('');
-      setFiles([]);
-    }
+    // Clear inputs always
+    setInputValue('');
+    setFiles([]);
     
     setIsLoading(true);
 
@@ -375,10 +417,12 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
 
-      // Verificar se a conversa foi finalizada
-      if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
+      // Verificar se chegou na avaliação
+      if (assistantResponse.includes('avaliar nosso atendimento')) {
+        setIsEvaluating(true);
+      } else if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
         setIsCompleted(true);
-        clearStorage(); // Limpar dados locais quando completado
+        clearStorage();
         
         const finalData = {
           ...updatedData,
@@ -508,6 +552,45 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
               </Card>
             </div>
           ))}
+
+          {/* Sistema de Avaliação */}
+          {isEvaluating && (
+            <div className="flex justify-start">
+              <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 max-w-[85%] md:max-w-[80%]">
+                <h3 className="font-semibold text-gray-800 mb-3">Como foi nossa conversa?</h3>
+                <div className="flex gap-2 mb-4">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Button
+                      key={star}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEvaluation(star)}
+                      className={`p-1 ${
+                        evaluation >= star ? 'text-yellow-500' : 'text-gray-300'
+                      }`}
+                    >
+                      <Star className="w-6 h-6 fill-current" />
+                    </Button>
+                  ))}
+                </div>
+                <Input
+                  placeholder="Deixe um comentário (opcional)"
+                  value={evaluationComment}
+                  onChange={(e) => setEvaluationComment(e.target.value)}
+                  className="mb-3"
+                />
+                <Button
+                  onClick={handleEvaluationSubmit}
+                  disabled={evaluation === 0}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                  size="sm"
+                >
+                  Enviar Avaliação
+                </Button>
+              </Card>
+            </div>
+          )}
+
           {isLoading && (
             <div className="flex justify-start">
               <Card className="p-3 md:p-4 bg-gray-50">
@@ -533,7 +616,8 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
         </div>
       )}
 
-      <div className="border-t bg-white p-3 md:p-4">
+      {/* Barra de envio - Ajustada para mobile */}
+      <div className="border-t bg-white p-3 md:p-4 relative z-10">
         <div className="max-w-4xl mx-auto">
           {files.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -554,12 +638,12 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
               size="icon"
               onClick={() => fileInputRef.current?.click()}
               className="shrink-0 h-10 w-10 md:h-10 md:w-10"
-              disabled={isCompleted}
+              disabled={isCompleted || isEvaluating}
             >
               <Upload className="w-4 h-4" />
             </Button>
             
-            <AudioRecorder onAudioRecorded={handleAudioRecorded} />
+            <AudioRecorder onAudioRecorded={handleAudioRecorded} disabled={isCompleted || isEvaluating} />
             
             <Input
               ref={fileInputRef}
@@ -574,14 +658,14 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Nossa eq
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={isCompleted ? "Briefing finalizado" : "Digite sua resposta..."}
+              placeholder={isCompleted ? "Briefing finalizado" : isEvaluating ? "Aguardando avaliação..." : "Digite sua resposta..."}
               className="flex-1 text-sm md:text-base"
-              disabled={isLoading || isCompleted}
+              disabled={isLoading || isCompleted || isEvaluating}
             />
             
             <Button
               onClick={() => handleSendMessage()}
-              disabled={isLoading || isCompleted || (!inputValue.trim() && files.length === 0)}
+              disabled={isLoading || isCompleted || isEvaluating || (!inputValue.trim() && files.length === 0)}
               className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10 md:h-10 md:w-10"
               size="icon"
             >
