@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ChatInterface from '@/components/ChatInterface';
 import MobileCarousel from '@/components/MobileCarousel';
@@ -7,19 +6,15 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Building2, Sparkles, CheckCircle2, X, ArrowRight } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
-
 const Index = () => {
   const [chatStarted, setChatStarted] = useState(false);
   const [collectedData, setCollectedData] = useState(null);
-
   const handleDataCollected = (data: any) => {
     setCollectedData(data);
     console.log('Dados coletados:', data);
   };
-
   if (!chatStarted) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+    return <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent)] pointer-events-none"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.08),transparent)] pointer-events-none"></div>
@@ -28,11 +23,7 @@ const Index = () => {
           {/* Header */}
           <div className="text-center mb-12 md:mb-20">
             <div className="flex items-center justify-center gap-3 mb-8">
-              <img 
-                src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
-                alt="Planner Logo" 
-                className="h-14 md:h-20 w-auto drop-shadow-lg"
-              />
+              <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-14 md:h-20 w-auto drop-shadow-lg" />
             </div>
             
             {/* Main Headlines with Premium Typography */}
@@ -90,26 +81,22 @@ const Index = () => {
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-full opacity-60"></div>
               
               <div className="relative z-10">
-                <div className="mb-6">
+                <div className="mb-6 py-0 my-0">
                   <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl mb-6 shadow-lg">
                     <MessageSquare className="w-8 h-8 text-white" />
                   </div>
                 </div>
                 
-                <h3 className="text-2xl md:text-3xl font-light text-gray-900 mb-4 tracking-tight">
+                <h3 className="text-2xl font-light text-gray-900 mb-4 tracking-tight md:text-2xl">
                   Pronto para <span className="font-medium">começar</span>?
                 </h3>
                 
-                <p className="text-gray-600 mb-8 text-lg leading-relaxed font-light max-w-2xl mx-auto">
+                <p className="text-gray-600 mb-8 leading-relaxed font-light max-w-2xl mx-auto text-base">
                   O processo leva cerca de <span className="font-medium text-gray-800">10-15 minutos</span> e você pode enviar arquivos como 
                   logo, fotos e outros materiais durante a conversa.
                 </p>
                 
-                <Button
-                  onClick={() => setChatStarted(true)}
-                  size="lg"
-                  className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-8 md:px-12 py-4 text-lg font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group"
-                >
+                <Button onClick={() => setChatStarted(true)} size="lg" className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-8 md:px-12 py-4 text-lg font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group">
                   <MessageSquare className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
                   Iniciar Conversa
                   <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
@@ -169,21 +156,14 @@ const Index = () => {
             </PrivacyPolicyModal>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       {/* Header do chat */}
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 md:p-4 sticky top-0 z-10 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-3 flex-1">
-            <img 
-              src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
-              alt="Planner Logo" 
-              className="h-8 md:h-10 w-auto flex-shrink-0"
-            />
+            <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-8 md:h-10 w-auto flex-shrink-0" />
             
             {/* Barra de progresso compacta no mobile */}
             <div className="block md:hidden flex-1 mx-2">
@@ -195,12 +175,7 @@ const Index = () => {
             </div>
           </div>
           
-          <Button
-            variant="outline"
-            onClick={() => setChatStarted(false)}
-            className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50"
-            size="sm"
-          >
+          <Button variant="outline" onClick={() => setChatStarted(false)} className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50" size="sm">
             <X className="w-4 h-4 md:hidden" />
             <span className="hidden md:inline text-xs md:text-sm px-2 md:px-4 py-1 md:py-2">
               Voltar ao Início
@@ -213,8 +188,6 @@ const Index = () => {
       <div className="h-[calc(100vh-60px)] md:h-[calc(100vh-80px)] pb-safe">
         <ChatInterface onDataCollected={handleDataCollected} />
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
