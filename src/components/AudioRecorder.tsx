@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Play, Pause } from 'lucide-react';
+import { Mic, MicOff, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AudioRecorderProps {
@@ -10,10 +10,10 @@ interface AudioRecorderProps {
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startRecording = async () => {
     try {
@@ -34,11 +34,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded }) => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' });
         setAudioBlob(blob);
-        onAudioRecorded(blob);
       };
       
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingTime(0);
+      
+      // Iniciar contador de tempo
+      intervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     } catch (error) {
       console.error('Erro ao acessar microfone:', error);
     }
@@ -49,72 +54,102 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded }) => {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
     }
   };
 
-  const playAudio = () => {
-    if (audioBlob && audioRef.current) {
-      audioRef.current.play();
-      setIsPlaying(true);
+  const sendAudio = () => {
+    if (audioBlob) {
+      onAudioRecorded(audioBlob);
+      setAudioBlob(null);
+      setRecordingTime(0);
     }
   };
 
-  const pauseAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
+  const cancelAudio = () => {
+    setAudioBlob(null);
+    setRecordingTime(0);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   useEffect(() => {
-    if (audioBlob) {
-      const audioUrl = URL.createObjectURL(audioBlob);
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
-      
-      return () => URL.revokeObjectURL(audioUrl);
-    }
-  }, [audioBlob]);
+    };
+  }, []);
+
+  if (isRecording) {
+    return (
+      <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          <span className="text-sm text-red-600">{formatTime(recordingTime)}</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={stopRecording}
+          className="h-8 w-8 text-red-600 hover:bg-red-100"
+        >
+          <MicOff className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  if (audioBlob) {
+    return (
+      <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 flex-1">
+          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+            <Mic className="w-4 h-4 text-purple-600" />
+          </div>
+          <div className="flex-1">
+            <div className="text-xs text-gray-600">Áudio gravado</div>
+            <div className="text-xs text-gray-500">{formatTime(recordingTime)}</div>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={cancelAudio}
+          className="h-6 w-6 text-gray-500 hover:text-gray-700"
+        >
+          <X className="w-3 h-3" />
+        </Button>
+        <Button
+          onClick={sendAudio}
+          size="icon"
+          className="h-8 w-8 bg-purple-600 hover:bg-purple-700"
+        >
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-2">
-      {!audioBlob ? (
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={isRecording ? stopRecording : startRecording}
-          className={`h-10 w-10 ${isRecording ? 'bg-red-500 text-white' : ''}`}
-        >
-          {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-        </Button>
-      ) : (
-        <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={isPlaying ? pauseAudio : playAudio}
-            className="h-6 w-6"
-          >
-            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-          </Button>
-          <div className="w-20 h-1 bg-gray-300 rounded">
-            <div className="h-full bg-purple-500 rounded" style={{ width: '50%' }}></div>
-          </div>
-          <span className="text-xs text-gray-600">0:05</span>
-        </div>
-      )}
-      
-      <audio
-        ref={audioRef}
-        onEnded={() => setIsPlaying(false)}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-      />
-    </div>
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={startRecording}
+      className="h-10 w-10"
+    >
+      <Mic className="w-4 h-4" />
+    </Button>
   );
 };
 
