@@ -9,7 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      client_briefings: {
+        Row: {
+          additional_info: string | null
+          company_name: string | null
+          contact_info: string | null
+          conversation_log: Json | null
+          created_at: string | null
+          description: string | null
+          design_preferences: string | null
+          differentials: string | null
+          id: string
+          mission: string | null
+          products_services: string | null
+          session_id: string
+          slogan: string | null
+          social_proof: string | null
+          status: string | null
+          target_audience: string | null
+          updated_at: string | null
+          uploaded_files: string[] | null
+          values: string | null
+          vision: string | null
+          website_objective: string | null
+        }
+        Insert: {
+          additional_info?: string | null
+          company_name?: string | null
+          contact_info?: string | null
+          conversation_log?: Json | null
+          created_at?: string | null
+          description?: string | null
+          design_preferences?: string | null
+          differentials?: string | null
+          id?: string
+          mission?: string | null
+          products_services?: string | null
+          session_id: string
+          slogan?: string | null
+          social_proof?: string | null
+          status?: string | null
+          target_audience?: string | null
+          updated_at?: string | null
+          uploaded_files?: string[] | null
+          values?: string | null
+          vision?: string | null
+          website_objective?: string | null
+        }
+        Update: {
+          additional_info?: string | null
+          company_name?: string | null
+          contact_info?: string | null
+          conversation_log?: Json | null
+          created_at?: string | null
+          description?: string | null
+          design_preferences?: string | null
+          differentials?: string | null
+          id?: string
+          mission?: string | null
+          products_services?: string | null
+          session_id?: string
+          slogan?: string | null
+          social_proof?: string | null
+          status?: string | null
+          target_audience?: string | null
+          updated_at?: string | null
+          uploaded_files?: string[] | null
+          values?: string | null
+          vision?: string | null
+          website_objective?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -47,7 +47,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [isCompleted, setIsCompleted] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [sessionId] = useState(`session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [collectedData, setCollectedData] = useState<Partial<CollectedData>>({
     session_id: sessionId,
@@ -193,10 +192,6 @@ Ao completar todos os blocos, FINALIZE com:
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() && files.length === 0) return;
-    if (!apiKey.trim()) {
-      alert('Por favor, insira sua chave da API OpenAI para continuar.');
-      return;
-    }
 
     let uploadedFileUrls: string[] = [];
     
@@ -240,29 +235,26 @@ Ao completar todos os blocos, FINALIZE com:
         content: msg.content
       }));
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
+      // Chamada para a Edge Function
+      const { data: responseData, error } = await supabase.functions.invoke('chat-openai', {
+        body: {
           messages: [
             { role: 'system', content: systemPrompt },
             ...conversationHistory
           ],
-          temperature: 0.7,
-          max_tokens: 1000,
-        }),
+          sessionId: sessionId
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Erro na API da OpenAI');
+      if (error) {
+        throw new Error(`Erro na Edge Function: ${error.message}`);
       }
 
-      const data = await response.json();
-      const assistantResponse = data.choices[0].message.content;
+      if (!responseData.success) {
+        throw new Error(responseData.error || 'Erro desconhecido');
+      }
+
+      const assistantResponse = responseData.message;
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -341,24 +333,6 @@ Ao completar todos os blocos, FINALIZE com:
 
   return (
     <div className="h-full flex flex-col">
-      {!apiKey && (
-        <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Chave da API OpenAI (necessária para o funcionamento)
-          </label>
-          <Input
-            type="password"
-            placeholder="sk-..."
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="max-w-md"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Esta chave é usada apenas para esta sessão e não é armazenada.
-          </p>
-        </div>
-      )}
-
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4 max-w-4xl mx-auto">
           {messages.map((message) => (
@@ -462,12 +436,12 @@ Ao completar todos os blocos, FINALIZE com:
               onKeyPress={handleKeyPress}
               placeholder={isCompleted ? "Briefing finalizado" : "Digite sua resposta..."}
               className="flex-1"
-              disabled={isLoading || isCompleted || !apiKey}
+              disabled={isLoading || isCompleted}
             />
             
             <Button
               onClick={handleSendMessage}
-              disabled={isLoading || isCompleted || !apiKey || (!inputValue.trim() && files.length === 0)}
+              disabled={isLoading || isCompleted || (!inputValue.trim() && files.length === 0)}
               className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
               {isLoading ? (
