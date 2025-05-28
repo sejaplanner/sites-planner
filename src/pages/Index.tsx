@@ -50,7 +50,7 @@ const Index = () => {
             
             {/* Subtitle with Modern Typography */}
             <div className="mt-12 max-w-4xl py-0 mx my-[34px] mx-[54px]">
-              <p className="text-xl text-gray-600 leading-relaxed font-light md:text-xl my-[5px] px-0 text-center mx-[22px]">
+              <p className="text-gray-600 leading-relaxed font-light md:text-xl my-[5px] text-center px-[2px] py-0 mx-[-26px] text-base">
                 Nossa{' '}
                 <span className="relative">
                   <span className="font-medium text-gray-800">assistente virtual inteligente</span>
@@ -73,7 +73,7 @@ const Index = () => {
 
           {/* Main CTA Card */}
           <div className="text-center max-w-3xl mx-auto mb-16 px-4">
-            <Card className="p-8 md:p-12 bg-white/90 backdrop-blur-md border-0 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-500 relative overflow-hidden py-[25px]">
+            <Card className="p-8 md:p-12 bg-white/90 backdrop-blur-md border-0 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-500 relative overflow-hidden py-[25px] my-[-34px]">
               {/* Card Background Pattern */}
               <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50/50 to-purple-50/30 pointer-events-none"></div>
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-full opacity-60"></div>
@@ -85,11 +85,11 @@ const Index = () => {
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-light text-gray-900 mb-4 tracking-tight md:text-2xl">
+                <h3 className="text-2xl font-light text-gray-900 mb-4 tracking-tight md:text-2xl my-[-25px]">
                   Pronto para <span className="font-medium">começar</span>?
                 </h3>
                 
-                <p className="text-gray-600 mb-8 leading-relaxed font-light max-w-2xl mx-auto text-base">
+                <p className="text-gray-600 mb-8 leading-relaxed font-light max-w-2xl mx-auto text-sm">
                   O processo leva cerca de <span className="font-medium text-gray-800">10-15 minutos</span> e você pode enviar arquivos como 
                   logo, fotos e outros materiais durante a conversa.
                 </p>
