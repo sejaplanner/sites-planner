@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -251,16 +250,31 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
 
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     try {
+      console.log('🎤 Iniciando transcrição de áudio, tamanho:', audioBlob.size, 'bytes');
+      
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      
+      console.log('📦 Áudio convertido para base64, tamanho:', base64Audio.length, 'caracteres');
+      
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: { audio: base64Audio }
       });
-      if (error) throw new Error(error.message);
-      if (!data.success) throw new Error(data.error || 'Erro na transcrição');
+      
+      if (error) {
+        console.error('❌ Erro na edge function:', error);
+        throw new Error(error.message);
+      }
+      
+      if (!data.success) {
+        console.error('❌ Erro na transcrição:', data.error);
+        throw new Error(data.error || 'Erro na transcrição');
+      }
+      
+      console.log('✅ Transcrição bem-sucedida:', data.text);
       return data.text || '';
     } catch (error) {
-      console.error('Erro na transcrição:', error);
+      console.error('❌ Erro completo na transcrição:', error);
       throw error;
     }
   };
@@ -269,11 +283,17 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
     try {
       setIsLoading(true);
       const transcribedText = await transcribeAudio(audioBlob);
+      
       if (transcribedText.trim()) {
+        console.log('📝 Texto transcrito:', transcribedText);
         await handleSendMessage(transcribedText, [], audioBlob);
+      } else {
+        throw new Error('Texto transcrito está vazio');
       }
     } catch (error) {
-      console.error('Erro ao processar áudio:', error);
+      console.error('❌ Erro ao processar áudio:', error);
+      // Não definir isLoading como false aqui para permitir que o AudioRecorder mantenha o estado
+      throw error; // Re-throw para que o AudioRecorder possa tratar o erro
     } finally {
       setIsLoading(false);
     }

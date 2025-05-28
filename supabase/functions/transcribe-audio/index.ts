@@ -7,35 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function processBase64Chunks(base64String: string, chunkSize = 32768) {
-  const chunks: Uint8Array[] = [];
-  let position = 0;
-  
-  while (position < base64String.length) {
-    const chunk = base64String.slice(position, position + chunkSize);
-    const binaryChunk = atob(chunk);
-    const bytes = new Uint8Array(binaryChunk.length);
-    
-    for (let i = 0; i < binaryChunk.length; i++) {
-      bytes[i] = binaryChunk.charCodeAt(i);
-    }
-    
-    chunks.push(bytes);
-    position += chunkSize;
-  }
-
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  return result;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -48,17 +19,26 @@ serve(async (req) => {
       throw new Error('Dados de áudio não fornecidos');
     }
 
-    console.log('Processando áudio para transcrição...');
+    console.log('🎤 Processando áudio para transcrição...');
     
-    // Processar áudio em chunks
-    const binaryAudio = processBase64Chunks(audio);
+    // Converter base64 para binary de forma mais eficiente
+    const binaryString = atob(audio);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    console.log('📦 Áudio processado, tamanho:', bytes.length, 'bytes');
     
     // Preparar form data
     const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
+    // Usar audio/wav como tipo MIME mais compatível
+    const blob = new Blob([bytes], { type: 'audio/wav' });
+    formData.append('file', blob, 'audio.wav');
     formData.append('model', 'whisper-1');
     formData.append('language', 'pt');
+
+    console.log('🚀 Enviando para OpenAI...');
 
     // Enviar para OpenAI
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -71,12 +51,12 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Erro da API OpenAI:', errorText);
-      throw new Error(`Erro da API OpenAI: ${errorText}`);
+      console.error('❌ Erro da API OpenAI:', errorText);
+      throw new Error(`Erro da API OpenAI: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
-    console.log('Transcrição concluída:', result.text);
+    console.log('✅ Transcrição concluída:', result.text);
 
     return new Response(
       JSON.stringify({ 
@@ -88,7 +68,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro na transcrição:', error);
+    console.error('❌ Erro na transcrição:', error);
     return new Response(
       JSON.stringify({ 
         success: false,
