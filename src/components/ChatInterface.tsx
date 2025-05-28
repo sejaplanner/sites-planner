@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Upload, FileImage, Loader2, CheckCircle2, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import AudioRecorder from './AudioRecorder';
 import AudioPlayer from './AudioPlayer';
 import ImagePreview from './ImagePreview';
 import { usePersistence } from '@/hooks/usePersistence';
+import { extractUserName, extractWhatsApp, extractDataFromConversation } from '@/utils/dataExtraction';
 
 interface Message {
   id: string;
@@ -66,8 +68,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     conversation_log: [],
     uploaded_files: []
   });
-  const [currentBlock, setCurrentBlock] = useState(1);
-  const totalBlocks = 8;
+  const [currentProgress, setCurrentProgress] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,23 +86,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   useEffect(() => {
     if (!persistenceLoading && !isInitialized) {
       if (persistedData && persistedData.messages && persistedData.messages.length > 1) {
-        // Recuperar sessão anterior
         setMessages(persistedData.messages.map(msg => ({
           ...msg,
           timestamp: new Date(msg.timestamp)
         })));
         setCollectedData(persistedData.collectedData || collectedData);
-        setCurrentBlock(persistedData.currentBlock || 1);
+        setCurrentProgress(persistedData.currentProgress || 0);
         console.log('Sessão recuperada:', persistedData);
       } else {
-        // Iniciar nova conversa
         const initialMessage: Message = {
           id: '1',
           content: `Olá! Sou a assistente virtual da **Planner** e estou aqui para te ajudar a criar um site institucional incrível! 🚀
 
 Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
 
-**Qual é o seu nome?** 😊`,
+**Qual é o seu nome completo?** 😊`,
           role: 'assistant',
           timestamp: new Date()
         };
@@ -118,33 +117,46 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
         sessionId,
         messages,
         collectedData,
-        currentBlock
+        currentProgress
       });
     }
-  }, [messages, collectedData, currentBlock, isInitialized]);
+  }, [messages, collectedData, currentProgress, isInitialized]);
 
-  // Updated system prompt with mandatory name and WhatsApp collection and enhanced knowledge base
+  // Calcular progresso baseado nos dados coletados
+  const calculateProgress = (data: Partial<CollectedData>): number => {
+    const fields = [
+      'user_name', 'user_whatsapp', 'company_name', 'description', 
+      'mission', 'products_services', 'target_audience', 'social_proof',
+      'design_preferences', 'contact_info', 'website_objective'
+    ];
+    
+    const filledFields = fields.filter(field => data[field as keyof CollectedData] && 
+      String(data[field as keyof CollectedData]).trim() !== '');
+    
+    return Math.round((filledFields.length / fields.length) * 100);
+  };
+
+  // Sistema de prompt atualizado com informações sobre logo e domínio
   const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
 
 SOBRE A PLANNER:
 A Planner é uma empresa de Gestão Inteligente de Negócios, especializada na análise e otimização de processos por meio de organização estratégica e soluções tecnológicas personalizadas. Unimos experiência prática em gestão com inovação digital, atuando de forma integrada nos setores público e privado.
 
-NOSSOS SERVIÇOS:
-- Funcionários Digitais com IA (atendimentos SDR, Suporte Técnico, SAC, Secretária de Agendamentos)
-- Consultoria Estratégica: redesenho de processos operacionais e organizacionais
+O QUE FAZEMOS:
+- Somos a melhor empresa em automatização de Funcionários Digitais com IA, atendimentos personalizados de SDR, Suporte Técnico, SAC, Secretária de Agendamentos
+- Consultoria Estratégica: redesenho de processos operacionais e organizacionais com foco em eficiência e resultados
 - Sistemas sob Medida: desenvolvimento de soluções low-code e aplicativos personalizados
-- Gestão Pública: sistemas específicos para Secretarias de Educação
-- Treinamentos e Palestras: formação de equipes e capacitação de líderes
-- Soluções Integradas: gestão, engenharia, jurídico, contábil e TI
+- Gestão Pública: sistemas e serviços específicos para Secretarias de Educação, baseados em experiência real de gestão pública
+- Treinamentos e Palestras: formação de equipes e capacitação de líderes em gestão e tecnologia
+- Soluções Integradas: combinamos gestão, engenharia, jurídico, contábil e TI para entregar projetos completos
 
-SEGURANÇA E PRIVACIDADE:
+SEGURANÇA E PRIVACIDADE (LGPD):
 Todas as informações coletadas são protegidas conforme a LGPD. Coletamos dados com consentimento expresso, utilizamos apenas para desenvolvimento do projeto, implementamos medidas de segurança adequadas e não compartilhamos com terceiros sem autorização. Você tem direito ao acesso, correção, exclusão e portabilidade dos seus dados.
 
 REGRA FUNDAMENTAL - INFORMAÇÕES OBRIGATÓRIAS PRIMEIRO:
 - O PROCESSO SÓ DEVE INICIAR se o usuário fornecer NOME COMPLETO e NÚMERO DO WHATSAPP (com DDD)
 - Se o usuário não fornecer essas informações essenciais, insista educadamente até obter ambos
 - NÃO prossiga para outros tópicos até ter essas duas informações cruciais
-- Caso o usuário tente pular ou dar outras informações primeiro, redirecione educadamente para nome e WhatsApp
 
 ESTRATÉGIA DE PERGUNTAS ABERTAS:
 - SEMPRE faça perguntas ABERTAS que permitam múltiplas informações de uma vez
@@ -152,47 +164,25 @@ ESTRATÉGIA DE PERGUNTAS ABERTAS:
 - NÃO repita perguntas sobre informações já fornecidas
 - Seja estratégica: uma pergunta bem feita pode coletar informações de vários blocos
 
+INFORMAÇÕES ESSENCIAIS PARA COLETAR:
+1. Nome completo e WhatsApp (OBRIGATÓRIO PRIMEIRO)
+2. Nome da empresa e descrição do negócio
+3. Missão, visão e valores
+4. Produtos/serviços oferecidos
+5. Público-alvo e suas necessidades
+6. Cases de sucesso e credibilidade
+7. Preferências de design e estilo visual
+8. **LOGOTIPO: Pergunte se a empresa já possui logotipo ou se precisa criar um**
+9. **DOMÍNIO: Pergunte se já possui domínio registrado ou se precisa adquirir um**
+10. Formas de contato e localização
+11. Objetivo principal do site
+
 INSTRUÇÕES IMPORTANTES:
 - Seja sempre empática, natural e conversacional
-- Use linguagem casual mas profissional, sem ser robótica
-- Use emojis moderadamente para tornar a conversa mais acolhedora
+- Use linguagem casual mas profissional
+- Use emojis moderadamente
 - Sempre aguarde a resposta antes de fazer a próxima pergunta
-- Confirme informações importantes de forma natural na conversa
-
-FLUXO DA CONVERSA (colete informações de forma estratégica):
-
-🔷 BLOCO 1 – Informações de Contato (OBRIGATÓRIO PRIMEIRO)
-1. Nome completo do usuário e WhatsApp (com DDD) - ESSENCIAL
-
-🔷 BLOCO 2 – Informações da Empresa  
-2. Nome da empresa, descrição do negócio, tempo no mercado
-3. Missão, visão e valores da empresa
-4. Slogan (se houver)
-5. Principais diferenciais competitivos
-
-🔷 BLOCO 3 – Produtos/Serviços
-6. Produtos/serviços oferecidos e principais destaques
-7. Problemas que resolvem para os clientes
-
-🔷 BLOCO 4 – Público-Alvo
-8. Perfil do cliente ideal e suas principais necessidades
-9. Diferentes segmentos atendidos (se houver)
-
-🔷 BLOCO 5 – Credibilidade
-10. Cases de sucesso, depoimentos ou resultados importantes
-11. Certificações, prêmios ou parcerias relevantes
-
-🔷 BLOCO 6 – Visual e Design
-12. Estilo visual desejado para o site e inspirações
-13. Identidade visual existente (logo, cores, etc.)
-
-🔷 BLOCO 7 – Contato
-14. Formas de contato e localização
-15. Informações importantes para formulário de contato
-
-🔷 BLOCO 8 – Objetivo Final
-16. Principal objetivo do site e ação desejada dos visitantes
-17. Funcionalidades específicas (ex: WhatsApp flutuante)
+- Confirme informações importantes de forma natural
 
 FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
 
@@ -221,84 +211,114 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora go
     return uploadedUrls;
   };
 
-  // Enhanced data extraction function
-  const extractDataFromContent = (content: string, existingData: Partial<CollectedData>) => {
+  // Função melhorada para extrair dados das mensagens
+  const extractDataFromMessage = (content: string, existingData: Partial<CollectedData>): Partial<CollectedData> => {
     const updatedData = { ...existingData };
-    const lowerContent = content.toLowerCase();
+    
+    console.log('Extraindo dados da mensagem:', content);
 
-    // Extrair nome (procurar por padrões comuns)
+    // Extrair nome do usuário
     if (!updatedData.user_name) {
-      const namePatterns = [
-        /(?:meu nome é|me chamo|sou o|sou a|eu sou)\s+([A-Za-zÀ-ÿ\s]{2,30})/i,
-        /^([A-Za-zÀ-ÿ]{2,}\s+[A-Za-zÀ-ÿ\s]{1,28})$/i
-      ];
-      
-      for (const pattern of namePatterns) {
-        const match = content.match(pattern);
-        if (match) {
-          updatedData.user_name = match[1].trim();
-          break;
-        }
+      const name = extractUserName(content);
+      if (name) {
+        updatedData.user_name = name;
+        console.log('Nome extraído:', name);
       }
     }
 
     // Extrair WhatsApp
     if (!updatedData.user_whatsapp) {
-      const whatsappPatterns = [
-        /(?:whatsapp|telefone|celular|número).*?(\d{2}\s?\d{4,5}[-\s]?\d{4})/i,
-        /(\d{2}\s?\d{4,5}[-\s]?\d{4})/
-      ];
-      
-      for (const pattern of whatsappPatterns) {
-        const match = content.match(pattern);
-        if (match) {
-          updatedData.user_whatsapp = match[1].replace(/[-\s]/g, '');
-          break;
-        }
+      const whatsapp = extractWhatsApp(content);
+      if (whatsapp) {
+        updatedData.user_whatsapp = whatsapp;
+        console.log('WhatsApp extraído:', whatsapp);
       }
     }
 
-    // Extrair nome da empresa
-    if (!updatedData.company_name && (lowerContent.includes('empresa') || lowerContent.includes('negócio'))) {
-      const companyPatterns = [
-        /(?:empresa|negócio|companhia)\s+(?:se chama|é|chamada?)\s+([A-Za-zÀ-ÿ\s&]{2,50})/i,
-        /([A-Za-zÀ-ÿ\s&]{2,50})\s+(?:é o nome|é nossa empresa)/i
-      ];
-      
-      for (const pattern of companyPatterns) {
-        const match = content.match(pattern);
-        if (match) {
-          updatedData.company_name = match[1].trim();
-          break;
-        }
-      }
+    // Extrair dados usando a função do utils
+    const extractedBriefingData = extractDataFromConversation([{ role: 'user', content }]);
+    
+    // Mapear os dados extraídos para o formato do banco
+    if (extractedBriefingData.companyInfo.name && !updatedData.company_name) {
+      updatedData.company_name = extractedBriefingData.companyInfo.name;
+    }
+    
+    if (extractedBriefingData.companyInfo.description && !updatedData.description) {
+      updatedData.description = extractedBriefingData.companyInfo.description;
+    }
+    
+    if (extractedBriefingData.companyInfo.mission && !updatedData.mission) {
+      updatedData.mission = extractedBriefingData.companyInfo.mission;
+    }
+    
+    if (extractedBriefingData.companyInfo.vision && !updatedData.vision) {
+      updatedData.vision = extractedBriefingData.companyInfo.vision;
+    }
+    
+    if (extractedBriefingData.companyInfo.values && !updatedData.values) {
+      updatedData.values = extractedBriefingData.companyInfo.values;
+    }
+    
+    if (extractedBriefingData.companyInfo.slogan && !updatedData.slogan) {
+      updatedData.slogan = extractedBriefingData.companyInfo.slogan;
+    }
+    
+    if (extractedBriefingData.productsServices.main && !updatedData.products_services) {
+      updatedData.products_services = extractedBriefingData.productsServices.main;
+    }
+    
+    if (extractedBriefingData.targetAudience.ideal && !updatedData.target_audience) {
+      updatedData.target_audience = extractedBriefingData.targetAudience.ideal;
+    }
+    
+    if (extractedBriefingData.socialProof.clients && !updatedData.social_proof) {
+      updatedData.social_proof = extractedBriefingData.socialProof.clients;
+    }
+    
+    if (extractedBriefingData.design.style && !updatedData.design_preferences) {
+      updatedData.design_preferences = extractedBriefingData.design.style;
+    }
+    
+    if (extractedBriefingData.contact.channels && !updatedData.contact_info) {
+      updatedData.contact_info = extractedBriefingData.contact.channels;
+    }
+    
+    if (extractedBriefingData.objectives.main && !updatedData.website_objective) {
+      updatedData.website_objective = extractedBriefingData.objectives.main;
     }
 
-    // Extrair missão
-    if (!updatedData.mission && lowerContent.includes('missão')) {
-      const missionMatch = content.match(/missão[^.]*[:.]\s*([^.]{10,200})/i);
-      if (missionMatch) {
-        updatedData.mission = missionMatch[1].trim();
-      }
-    }
-
-    // Extrair descrição do negócio
-    if (!updatedData.description && (lowerContent.includes('fazemos') || lowerContent.includes('trabalhamos'))) {
-      if (content.length > 20 && content.length < 500) {
-        updatedData.description = content;
-      }
-    }
-
+    console.log('Dados atualizados:', updatedData);
     return updatedData;
   };
 
   const saveDataToSupabase = async (data: Partial<CollectedData>) => {
     try {
+      console.log('Salvando dados no Supabase:', data);
+      
       const { error } = await supabase
         .from('client_briefings')
         .upsert({
           session_id: data.session_id,
-          ...data,
+          user_name: data.user_name,
+          user_whatsapp: data.user_whatsapp,
+          company_name: data.company_name,
+          slogan: data.slogan,
+          mission: data.mission,
+          vision: data.vision,
+          values: data.values,
+          description: data.description,
+          differentials: data.differentials,
+          products_services: data.products_services,
+          target_audience: data.target_audience,
+          social_proof: data.social_proof,
+          design_preferences: data.design_preferences,
+          contact_info: data.contact_info,
+          website_objective: data.website_objective,
+          additional_info: data.additional_info,
+          uploaded_files: data.uploaded_files,
+          conversation_log: data.conversation_log,
+          status: data.status,
+          created_at: data.created_at,
           updated_at: new Date().toISOString()
         });
 
@@ -312,22 +332,8 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora go
     }
   };
 
-  const detectCurrentBlock = (content: string): number => {
-    if (content.includes('WhatsApp')) return 1;
-    if (content.includes('missão') || content.includes('empresa')) return 2;
-    if (content.includes('produto') || content.includes('serviço')) return 3;
-    if (content.includes('cliente') || content.includes('público')) return 4;
-    if (content.includes('depoimento') || content.includes('case')) return 5;
-    if (content.includes('visual') || content.includes('design') || content.includes('logo')) return 6;
-    if (content.includes('contato') || content.includes('endereço')) return 7;
-    if (content.includes('objetivo') || content.includes('visitante')) return 8;
-    if (content.includes('Nossa equipe da Planner entrará em contato')) return 9;
-    return currentBlock;
-  };
-
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     try {
-      // Converter Blob para base64
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
@@ -356,12 +362,10 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora go
       const transcribedText = await transcribeAudio(audioBlob);
       
       if (transcribedText.trim()) {
-        // Send the audio message directly without setting inputValue
         await handleSendMessage(transcribedText, [], audioBlob);
       }
     } catch (error) {
       console.error('Erro ao processar áudio:', error);
-      // Adicionar mensagem de erro amigável
     } finally {
       setIsLoading(false);
     }
@@ -371,17 +375,6 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora go
     if (evaluation === 0) return;
 
     try {
-      const evaluationData = {
-        session_id: sessionId,
-        rating: evaluation,
-        comment: evaluationComment,
-        created_at: new Date().toISOString()
-      };
-
-      // Log evaluation locally for now (since table doesn't exist yet)
-      console.log('Avaliação salva:', evaluationData);
-
-      // Add final message
       const finalMessage: Message = {
         id: (Date.now() + 2).toString(),
         content: `Muito obrigada pela sua avaliação${evaluation >= 4 ? ' excelente' : ''}! ${evaluationComment ? 'Suas sugestões são muito valiosas para nós. ' : ''}
@@ -427,10 +420,10 @@ Tenha um excelente dia! 🚀✨`,
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     
-    // Extrair dados da mensagem do usuário antes de salvar
-    const extractedData = extractDataFromContent(textToSend, collectedData);
+    // Extrair dados IMEDIATAMENTE da mensagem do usuário
+    const extractedData = extractDataFromMessage(textToSend, collectedData);
     
-    // Atualizar dados coletados com arquivos e dados extraídos
+    // Atualizar dados coletados
     const updatedData = {
       ...extractedData,
       uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFileUrls],
@@ -444,6 +437,12 @@ Tenha um excelente dia! 🚀✨`,
     };
     
     setCollectedData(updatedData);
+    
+    // Calcular e atualizar progresso
+    const newProgress = calculateProgress(updatedData);
+    setCurrentProgress(newProgress);
+    
+    // Salvar IMEDIATAMENTE no Supabase
     await saveDataToSupabase(updatedData);
 
     // Clear inputs always
@@ -458,7 +457,6 @@ Tenha um excelente dia! 🚀✨`,
         content: msg.content
       }));
 
-      // Chamada para a Edge Function
       const { data: responseData, error } = await supabase.functions.invoke('chat-openai', {
         body: {
           messages: [
@@ -478,10 +476,6 @@ Tenha um excelente dia! 🚀✨`,
       }
 
       const assistantResponse = responseData.message;
-
-      // Detectar bloco atual baseado na resposta
-      const detectedBlock = detectCurrentBlock(assistantResponse);
-      setCurrentBlock(detectedBlock);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -516,7 +510,6 @@ Tenha um excelente dia! 🚀✨`,
         await saveDataToSupabase(finalData);
         onDataCollected(finalData);
       } else {
-        // Salvar progresso da conversa com dados extraídos
         const progressData = {
           ...updatedData,
           conversation_log: finalMessages.map(msg => ({
@@ -575,35 +568,34 @@ Tenha um excelente dia! 🚀✨`,
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col max-w-full overflow-hidden">
       {/* Barra de Progresso - Apenas Desktop */}
       <div className="hidden md:block p-3 md:p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50 flex-shrink-0">
-        <ProgressBar currentBlock={currentBlock} totalBlocks={totalBlocks} />
+        <ProgressBar currentProgress={currentProgress} />
       </div>
 
-      <ScrollArea className="flex-1 p-3 md:p-4 min-h-0">
+      <ScrollArea className="flex-1 p-3 md:p-4 min-h-0 max-w-full">
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto">
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}
             >
               <Card
-                className={`max-w-[85%] md:max-w-[80%] p-3 md:p-4 ${
+                className={`max-w-[85%] md:max-w-[80%] p-3 md:p-4 break-words overflow-hidden ${
                   message.role === 'user'
                     ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
                     : 'bg-white border-gray-200 shadow-sm'
                 }`}
               >
-                <div className="text-sm md:text-base leading-relaxed">
+                <div className="text-sm md:text-base leading-relaxed break-words">
                   {message.role === 'assistant' ? (
                     <MarkdownContent content={message.content} />
                   ) : (
-                    <div className="whitespace-pre-wrap">{message.content}</div>
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
                   )}
                 </div>
 
-                {/* Preview de imagens */}
                 {message.files && message.files.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {message.files.map((file, index) => (
@@ -612,7 +604,6 @@ Tenha um excelente dia! 🚀✨`,
                   </div>
                 )}
 
-                {/* Player de áudio */}
                 {message.audioBlob && (
                   <div className="mt-3">
                     <AudioPlayer 
@@ -631,7 +622,7 @@ Tenha um excelente dia! 🚀✨`,
 
           {/* Sistema de Avaliação */}
           {isEvaluating && (
-            <div className="flex justify-start">
+            <div className="flex justify-start max-w-full">
               <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 max-w-[85%] md:max-w-[80%]">
                 <h3 className="font-semibold text-gray-800 mb-3">Como foi nossa conversa?</h3>
                 <div className="flex gap-2 mb-4">
@@ -686,15 +677,15 @@ Tenha um excelente dia! 🚀✨`,
           <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto">
             <CheckCircle2 className="w-5 h-5" />
             <span className="font-medium text-sm md:text-base">
-              Briefing finalizado! Dados salvos com sucesso no Supabase (ID: {sessionId})
+              Briefing finalizado! Dados salvos com sucesso (ID: {sessionId})
             </span>
           </div>
         </div>
       )}
 
-      {/* Barra de envio - Ajustada para mobile sem scroll */}
-      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0">
-        <div className="max-w-4xl mx-auto">
+      {/* Barra de envio */}
+      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0 max-w-full">
+        <div className="max-w-4xl mx-auto w-full">
           {files.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {files.map((file, index) => (
@@ -708,12 +699,12 @@ Tenha um excelente dia! 🚀✨`,
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full">
             <Button
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 h-10 w-10 md:h-10 md:w-10"
+              className="shrink-0 h-10 w-10"
               disabled={isCompleted || isEvaluating}
             >
               <Upload className="w-4 h-4" />
@@ -735,14 +726,14 @@ Tenha um excelente dia! 🚀✨`,
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={isCompleted ? "Briefing finalizado" : isEvaluating ? "Aguardando avaliação..." : "Digite sua resposta..."}
-              className="flex-1 text-sm md:text-base"
+              className="flex-1 text-sm md:text-base min-w-0"
               disabled={isLoading || isCompleted || isEvaluating}
             />
             
             <Button
               onClick={() => handleSendMessage()}
               disabled={isLoading || isCompleted || isEvaluating || (!inputValue.trim() && files.length === 0)}
-              className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10 md:h-10 md:w-10"
+              className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10"
               size="icon"
             >
               {isLoading ? (
