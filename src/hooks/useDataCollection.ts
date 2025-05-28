@@ -24,6 +24,8 @@ interface CollectedData {
   uploaded_files?: string[];
   conversation_log: any[];
   historico_conversa?: any[];
+  user_evaluation?: number;
+  evaluation_comment?: string;
   status: 'in_progress' | 'completed';
   created_at: string;
 }
@@ -51,6 +53,7 @@ export const useDataCollection = (sessionId: string) => {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isNewSession, setIsNewSession] = useState(true);
 
   const saveDataToSupabase = async (data: Partial<CollectedData>, retryCount = 0): Promise<void> => {
     const maxRetries = 3;
@@ -63,6 +66,7 @@ export const useDataCollection = (sessionId: string) => {
         user_whatsapp: data.user_whatsapp,
         company_name: data.company_name,
         historico_length: data.historico_conversa?.length || 0,
+        isNewSession,
         timestamp: new Date().toISOString()
       });
 
@@ -73,54 +77,89 @@ export const useDataCollection = (sessionId: string) => {
 
       setIsSaving(true);
 
-      const { error } = await supabase
+      // Verificar se já existe um registro para este session_id
+      const { data: existingData } = await supabase
         .from('client_briefings')
-        .upsert({
-          session_id: data.session_id,
-          user_name: data.user_name,
-          user_whatsapp: data.user_whatsapp,
-          company_name: data.company_name,
-          slogan: data.slogan,
-          mission: data.mission,
-          vision: data.vision,
-          values: data.values,
-          description: data.description,
-          differentials: data.differentials,
-          products_services: data.products_services,
-          target_audience: data.target_audience,
-          social_proof: data.social_proof,
-          design_preferences: data.design_preferences,
-          contact_info: data.contact_info,
-          website_objective: data.website_objective,
-          additional_info: data.additional_info,
-          uploaded_files: data.uploaded_files,
-          conversation_log: data.conversation_log,
-          historico_conversa: data.historico_conversa,
-          status: data.status,
-          created_at: data.created_at,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'session_id',
-          ignoreDuplicates: false
-        });
+        .select('id, session_id')
+        .eq('session_id', data.session_id)
+        .single();
 
-      if (error) {
-        console.error(`❌ ERRO NA TENTATIVA ${retryCount + 1}:`, error);
+      if (existingData) {
+        console.log('📝 Atualizando registro existente...');
+        setIsNewSession(false);
         
-        if (error.message?.includes('duplicate key') && retryCount < maxRetries) {
-          console.log(`🔄 Erro de duplicação detectado, tentando novamente em ${retryDelay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
-          return saveDataToSupabase(data, retryCount + 1);
-        }
-        
-        throw error;
+        const { error } = await supabase
+          .from('client_briefings')
+          .update({
+            user_name: data.user_name,
+            user_whatsapp: data.user_whatsapp,
+            company_name: data.company_name,
+            slogan: data.slogan,
+            mission: data.mission,
+            vision: data.vision,
+            values: data.values,
+            description: data.description,
+            differentials: data.differentials,
+            products_services: data.products_services,
+            target_audience: data.target_audience,
+            social_proof: data.social_proof,
+            design_preferences: data.design_preferences,
+            contact_info: data.contact_info,
+            website_objective: data.website_objective,
+            additional_info: data.additional_info,
+            uploaded_files: data.uploaded_files,
+            conversation_log: data.conversation_log,
+            historico_conversa: data.historico_conversa,
+            user_evaluation: data.user_evaluation,
+            evaluation_comment: data.evaluation_comment,
+            status: data.status,
+            updated_at: new Date().toISOString()
+          })
+          .eq('session_id', data.session_id);
+
+        if (error) throw error;
       } else {
-        console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!', {
-          session_id: data.session_id,
-          attempt: retryCount + 1,
-          timestamp: new Date().toISOString()
-        });
+        console.log('🆕 Criando novo registro...');
+        
+        const { error } = await supabase
+          .from('client_briefings')
+          .insert({
+            session_id: data.session_id,
+            user_name: data.user_name,
+            user_whatsapp: data.user_whatsapp,
+            company_name: data.company_name,
+            slogan: data.slogan,
+            mission: data.mission,
+            vision: data.vision,
+            values: data.values,
+            description: data.description,
+            differentials: data.differentials,
+            products_services: data.products_services,
+            target_audience: data.target_audience,
+            social_proof: data.social_proof,
+            design_preferences: data.design_preferences,
+            contact_info: data.contact_info,
+            website_objective: data.website_objective,
+            additional_info: data.additional_info,
+            uploaded_files: data.uploaded_files,
+            conversation_log: data.conversation_log,
+            historico_conversa: data.historico_conversa,
+            user_evaluation: data.user_evaluation,
+            evaluation_comment: data.evaluation_comment,
+            status: data.status,
+            created_at: data.created_at,
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
       }
+
+      console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!', {
+        session_id: data.session_id,
+        attempt: retryCount + 1,
+        timestamp: new Date().toISOString()
+      });
+
     } catch (error) {
       console.error('❌ ERRO CRÍTICO DE CONEXÃO COM BANCO:', {
         error,
@@ -165,6 +204,27 @@ export const useDataCollection = (sessionId: string) => {
       await saveDataToSupabase(updatedData);
     } catch (error) {
       console.error('❌ FALHA AO SALVAR HISTÓRICO:', error);
+    }
+  };
+
+  const saveEvaluation = async (evaluation: number, comment: string): Promise<void> => {
+    console.log('💾 Salvando avaliação do usuário:', { evaluation, comment, sessionId });
+    
+    const updatedData = {
+      ...collectedData,
+      user_evaluation: evaluation,
+      evaluation_comment: comment,
+      status: 'completed' as const
+    };
+
+    setCollectedData(updatedData);
+
+    try {
+      await saveDataToSupabase(updatedData);
+      console.log('✅ Avaliação salva com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao salvar avaliação:', error);
+      throw error;
     }
   };
 
@@ -274,6 +334,7 @@ export const useDataCollection = (sessionId: string) => {
     saveConversationHistory,
     analyzeFinalConversation,
     saveDataToSupabase,
+    saveEvaluation,
     isSaving
   };
 };

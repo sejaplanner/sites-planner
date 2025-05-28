@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -22,6 +23,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const { sessionId, isInitialized: sessionReady, clearSessionId } = useSessionId();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const evaluationRef = useRef<HTMLDivElement>(null);
   
   const {
     keyboardState,
@@ -58,6 +60,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     setCollectedData,
     saveConversationHistory,
     analyzeFinalConversation,
+    saveEvaluation,
     isSaving
   } = useDataCollection(sessionId);
 
@@ -135,9 +138,21 @@ FINALIZE APENAS com a frase exata: "Consegui todas as informações necessárias
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const scrollToEvaluation = () => {
+    setTimeout(() => {
+      evaluationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (isEvaluating) {
+      scrollToEvaluation();
+    }
+  }, [isEvaluating]);
 
   // Implementar auto-focus após envio de mensagem
   useEffect(() => {
@@ -266,7 +281,11 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
 
   const handleEvaluationSubmit = async () => {
     if (evaluation === 0) return;
+    
     try {
+      // Salvar avaliação no banco de dados
+      await saveEvaluation(evaluation, evaluationComment);
+      
       const finalMessage: Message = {
         id: (Date.now() + 2).toString(),
         content: `Muito obrigada pela sua avaliação${evaluation >= 4 ? ' excelente' : ''}! ${evaluationComment ? 'Suas sugestões são muito valiosas para nós. ' : ''}
@@ -279,8 +298,13 @@ Tenha um excelente dia! 🚀✨`,
         role: 'assistant',
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, finalMessage]);
       setIsEvaluating(false);
+      setIsCompleted(true);
+      clearStorage();
+      clearSessionId();
+      onDataCollected(collectedData);
     } catch (error) {
       console.error('Erro ao processar avaliação:', error);
     }
@@ -400,11 +424,6 @@ Tenha um excelente dia! 🚀✨`,
           console.error('❌ Erro na análise final:', error);
           setIsEvaluating(true); // Continuar para avaliação mesmo com erro
         }
-      } else if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
-        setIsCompleted(true);
-        clearStorage();
-        clearSessionId();
-        onDataCollected(collectedData);
       }
 
     } catch (error) {
@@ -457,14 +476,12 @@ Tenha um excelente dia! 🚀✨`,
   } : {};
 
   return (
-    <div 
-      className="h-full flex flex-col w-full max-w-full overflow-hidden relative"
-      style={containerStyle}
-    >
+    <div className="h-full flex flex-col w-full max-w-full overflow-hidden relative">
       <ScrollArea 
         className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full"
         ref={chatContainerRef}
         onClick={handleChatAreaClick}
+        style={containerStyle}
       >
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto w-full">
           {messages.map((message) => (
@@ -504,13 +521,15 @@ Tenha um excelente dia! 🚀✨`,
           ))}
 
           {isEvaluating && (
-            <EvaluationCard
-              evaluation={evaluation}
-              evaluationComment={evaluationComment}
-              onEvaluationChange={setEvaluation}
-              onCommentChange={setEvaluationComment}
-              onSubmit={handleEvaluationSubmit}
-            />
+            <div ref={evaluationRef} className="w-full">
+              <EvaluationCard
+                evaluation={evaluation}
+                evaluationComment={evaluationComment}
+                onEvaluationChange={setEvaluation}
+                onCommentChange={setEvaluationComment}
+                onSubmit={handleEvaluationSubmit}
+              />
+            </div>
           )}
 
           {(isLoading || isSaving) && (
@@ -525,7 +544,12 @@ Tenha um excelente dia! 🚀✨`,
               </Card>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          
+          {/* Espaço extra para garantir scroll adequado em avaliação no mobile */}
+          <div 
+            ref={messagesEndRef} 
+            className={isEvaluating ? 'h-32 md:h-16' : 'h-4'}
+          />
         </div>
       </ScrollArea>
 
@@ -540,13 +564,13 @@ Tenha um excelente dia! 🚀✨`,
         </div>
       )}
 
-      {/* Barra de mensagens com posicionamento dinâmico */}
-      <div className={`w-full flex-shrink-0 ${
+      {/* Barra de mensagens com posicionamento fixo para desktop e dinâmico para mobile */}
+      <div className={`w-full flex-shrink-0 border-t bg-white/95 backdrop-blur-sm relative z-10 ${
         isMobile 
           ? keyboardState.isOpen 
             ? 'fixed bottom-0 left-0 right-0 z-50' 
             : 'fixed bottom-0 left-0 right-0 z-50'
-          : 'relative'
+          : 'sticky bottom-0'
       }`}>
         <MessageInput
           inputValue={inputValue}

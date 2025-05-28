@@ -14,23 +14,14 @@ export const useSessionId = () => {
   const initializeSessionId = () => {
     console.log('🔧 Inicializando session_id...');
     
-    // Tentar recuperar do localStorage primeiro
+    // Sempre gerar novo session_id para evitar sobreposição de dados
+    const newSessionId = generateSessionId();
+    console.log('🆕 Novo session_id gerado:', newSessionId);
+    
+    // Salvar no localStorage
     const storageKey = 'current_briefing_session_id';
-    const storedSessionId = localStorage.getItem(storageKey);
-    
-    if (storedSessionId && storedSessionId.trim() !== '') {
-      console.log('✅ Session_id recuperado do localStorage:', storedSessionId);
-      setSessionId(storedSessionId);
-    } else {
-      // Gerar novo session_id
-      const newSessionId = generateSessionId();
-      console.log('🆕 Novo session_id gerado:', newSessionId);
-      
-      // Salvar no localStorage
-      localStorage.setItem(storageKey, newSessionId);
-      setSessionId(newSessionId);
-    }
-    
+    localStorage.setItem(storageKey, newSessionId);
+    setSessionId(newSessionId);
     setIsInitialized(true);
   };
 
