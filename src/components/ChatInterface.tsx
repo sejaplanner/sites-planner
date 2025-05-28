@@ -1,10 +1,10 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import MarkdownContent from './MarkdownContent';
-import ProgressBar from './ProgressBar';
 import AudioPlayer from './AudioPlayer';
 import ImagePreview from './ImagePreview';
 import EvaluationCard from './EvaluationCard';
@@ -396,13 +396,6 @@ Tenha um excelente dia! 🚀✨`,
 
   return (
     <div className="h-full flex flex-col w-full max-w-full overflow-hidden">
-      {/* Barra de Progresso - Apenas Desktop */}
-      <div className="hidden md:block bg-white/95 backdrop-blur-sm border-b border-gray-200/50 p-3 md:p-4 w-full">
-        <div className="max-w-4xl mx-auto w-full">
-          <ProgressBar currentProgress={currentProgress} isCompact={false} />
-        </div>
-      </div>
-
       <ScrollArea className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full">
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto w-full">
           {messages.map((message) => (
