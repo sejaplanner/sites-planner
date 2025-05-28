@@ -9,10 +9,24 @@ import { MessageSquare, Building2, Sparkles, CheckCircle2, X, ArrowRight } from 
 const Index = () => {
   const [chatStarted, setChatStarted] = useState(false);
   const [collectedData, setCollectedData] = useState(null);
+  const [chatKey, setChatKey] = useState(0); // Para forçar reinicialização
 
   const handleDataCollected = (data: any) => {
     setCollectedData(data);
     console.log('Dados coletados:', data);
+  };
+
+  const startNewChat = () => {
+    console.log('🚀 Iniciando nova conversa...');
+    setChatStarted(true);
+    setChatKey(prev => prev + 1); // Força reinicialização do ChatInterface
+  };
+
+  const goBackToHome = () => {
+    console.log('🏠 Voltando para o início...');
+    setChatStarted(false);
+    setCollectedData(null);
+    setChatKey(prev => prev + 1); // Limpa estado anterior
   };
 
   if (!chatStarted) {
@@ -102,7 +116,7 @@ const Index = () => {
                 </p>
                 
                 <Button 
-                  onClick={() => setChatStarted(true)} 
+                  onClick={startNewChat}
                   size="lg" 
                   className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-6 md:px-8 lg:px-12 xl:px-16 py-3 md:py-4 lg:py-5 text-base md:text-lg lg:text-xl font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group touch-manipulation min-h-[48px]"
                 >
@@ -184,7 +198,7 @@ const Index = () => {
           
           <Button 
             variant="outline" 
-            onClick={() => setChatStarted(false)} 
+            onClick={goBackToHome}
             className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50 touch-manipulation min-h-[44px]" 
             size="sm"
           >
@@ -198,7 +212,7 @@ const Index = () => {
 
       {/* Interface do chat - Espaço para navbar fixa */}
       <div className="flex-1 pt-12 md:pt-16 lg:pt-20 min-h-0 overflow-hidden w-full max-w-full">
-        <ChatInterface onDataCollected={handleDataCollected} />
+        <ChatInterface key={chatKey} onDataCollected={handleDataCollected} />
       </div>
     </div>
   );

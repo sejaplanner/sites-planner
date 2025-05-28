@@ -14,23 +14,14 @@ export const useSessionId = () => {
   const initializeSessionId = () => {
     console.log('🔧 Inicializando session_id...');
     
-    // Tentar recuperar do localStorage primeiro
+    // Sempre gerar novo session_id para cada nova sessão
+    const newSessionId = generateSessionId();
+    console.log('🆕 Novo session_id gerado:', newSessionId);
+    
+    // Salvar no localStorage
     const storageKey = 'current_briefing_session_id';
-    const storedSessionId = localStorage.getItem(storageKey);
-    
-    if (storedSessionId && storedSessionId.trim() !== '') {
-      console.log('✅ Session_id recuperado do localStorage:', storedSessionId);
-      setSessionId(storedSessionId);
-    } else {
-      // Gerar novo session_id
-      const newSessionId = generateSessionId();
-      console.log('🆕 Novo session_id gerado:', newSessionId);
-      
-      // Salvar no localStorage
-      localStorage.setItem(storageKey, newSessionId);
-      setSessionId(newSessionId);
-    }
-    
+    localStorage.setItem(storageKey, newSessionId);
+    setSessionId(newSessionId);
     setIsInitialized(true);
   };
 
@@ -39,6 +30,12 @@ export const useSessionId = () => {
     localStorage.removeItem('current_briefing_session_id');
     setSessionId('');
     setIsInitialized(false);
+  };
+
+  const startNewSession = () => {
+    console.log('🔄 Iniciando nova sessão...');
+    clearSessionId();
+    initializeSessionId();
   };
 
   useEffect(() => {
@@ -51,10 +48,10 @@ export const useSessionId = () => {
     sessionId,
     isInitialized,
     clearSessionId,
+    startNewSession,
     regenerateSessionId: () => {
       console.log('🔄 Regenerando session_id...');
-      clearSessionId();
-      initializeSessionId();
+      startNewSession();
     }
   };
 };

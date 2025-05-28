@@ -22,13 +22,10 @@ export const usePersistence = (sessionId: string) => {
         timestamp: new Date().toISOString()
       });
 
-      const currentData = localStorage.getItem(STORAGE_KEY);
-      const existingData = currentData ? JSON.parse(currentData) : {};
-      
       const updatedData = {
-        ...existingData,
-        ...data,
         sessionId: sessionId,
+        messages: data.messages || [],
+        collectedData: data.collectedData || {},
         lastActivity: Date.now()
       };
       
@@ -43,6 +40,12 @@ export const usePersistence = (sessionId: string) => {
     try {
       console.log('🔄 Carregando do localStorage para sessão:', sessionId);
       
+      // Para nova sessão, não carregar dados antigos
+      if (!sessionId || sessionId.trim() === '') {
+        console.log('ℹ️ Session ID vazio, não carregando dados antigos');
+        return null;
+      }
+      
       const data = localStorage.getItem(STORAGE_KEY);
       if (!data) {
         console.log('ℹ️ Nenhum dado encontrado no localStorage para esta sessão');
@@ -50,16 +53,12 @@ export const usePersistence = (sessionId: string) => {
       }
       
       const parsed = JSON.parse(data);
-      const now = Date.now();
       
-      if (parsed.lastActivity && (now - parsed.lastActivity) > (7 * 24 * 60 * 60 * 1000)) {
-        console.log('🗑️ Dados antigos encontrados, removendo...');
+      // Verificar se é da mesma sessão
+      if (parsed.sessionId !== sessionId) {
+        console.log('⚠️ SessionId não corresponde, dados são de outra sessão');
         localStorage.removeItem(STORAGE_KEY);
         return null;
-      }
-
-      if (parsed.sessionId && parsed.sessionId !== sessionId) {
-        console.log('⚠️ SessionId não corresponde, dados podem ser de outra sessão');
       }
       
       console.log('✅ Dados carregados do localStorage:', {
