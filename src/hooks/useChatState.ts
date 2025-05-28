@@ -19,7 +19,6 @@ export const useChatState = (sessionId: string) => {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluation, setEvaluation] = useState<number>(0);
   const [evaluationComment, setEvaluationComment] = useState('');
-  const [currentProgress, setCurrentProgress] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
   console.log('🔧 useChatState inicializado para sessão:', sessionId);
@@ -41,8 +40,6 @@ export const useChatState = (sessionId: string) => {
     setEvaluation,
     evaluationComment,
     setEvaluationComment,
-    currentProgress,
-    setCurrentProgress,
     isInitialized,
     setIsInitialized
   };

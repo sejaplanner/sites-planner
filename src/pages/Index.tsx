@@ -6,7 +6,6 @@ import PrivacyPolicyModal from '@/components/PrivacyPolicyModal';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Building2, Sparkles, CheckCircle2, X, ArrowRight } from 'lucide-react';
-import ProgressBar from '@/components/ProgressBar';
 
 const Index = () => {
   const [chatStarted, setChatStarted] = useState(false);
@@ -182,11 +181,6 @@ const Index = () => {
               alt="Planner Logo" 
               className="h-8 md:h-10 w-auto flex-shrink-0" 
             />
-            
-            {/* Barra de progresso compacta no mobile */}
-            <div className="block md:hidden flex-1 mx-2 min-w-0">
-              <ProgressBar currentProgress={0} isCompact={true} />
-            </div>
           </div>
           
           <Button 

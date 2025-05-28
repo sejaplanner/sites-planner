@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { extractUserName, extractWhatsApp, extractDataFromConversation } from '@/utils/dataExtraction';
 import type { Message } from './useChatState';
 
 interface CollectedData {
@@ -29,7 +28,6 @@ interface CollectedData {
   created_at: string;
 }
 
-// Debounce utility
 const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout;
   return function executedFunction(...args: any[]) {
@@ -56,7 +54,7 @@ export const useDataCollection = (sessionId: string) => {
 
   const saveDataToSupabase = async (data: Partial<CollectedData>, retryCount = 0): Promise<void> => {
     const maxRetries = 3;
-    const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+    const retryDelay = Math.pow(2, retryCount) * 1000;
 
     try {
       console.log(`🔄 TENTATIVA ${retryCount + 1}/${maxRetries} - Salvando dados no Supabase:`, {
@@ -109,7 +107,6 @@ export const useDataCollection = (sessionId: string) => {
       if (error) {
         console.error(`❌ ERRO NA TENTATIVA ${retryCount + 1}:`, error);
         
-        // Verificar se é erro de duplicação
         if (error.message?.includes('duplicate key') && retryCount < maxRetries) {
           console.log(`🔄 Erro de duplicação detectado, tentando novamente em ${retryDelay}ms...`);
           await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -144,93 +141,9 @@ export const useDataCollection = (sessionId: string) => {
     }
   };
 
-  // Debounced version of save function
   const debouncedSave = debounce(saveDataToSupabase, 500);
 
-  const extractAndSaveData = async (content: string, existingData: Partial<CollectedData>, messages: Message[]): Promise<Partial<CollectedData>> => {
-    const updatedData = { ...existingData };
-    
-    console.log('🔍 Extraindo dados da mensagem:', {
-      content: content.substring(0, 100) + '...',
-      session_id: updatedData.session_id,
-      timestamp: new Date().toISOString()
-    });
-
-    // Extrair nome do usuário
-    if (!updatedData.user_name) {
-      const name = extractUserName(content);
-      if (name) {
-        updatedData.user_name = name;
-        console.log('✅ Nome extraído:', name);
-      }
-    }
-
-    // Extrair WhatsApp
-    if (!updatedData.user_whatsapp) {
-      const whatsapp = extractWhatsApp(content);
-      if (whatsapp) {
-        updatedData.user_whatsapp = whatsapp;
-        console.log('✅ WhatsApp extraído:', whatsapp);
-      }
-    }
-
-    // Extrair dados usando a função do utils
-    const extractedBriefingData = extractDataFromConversation([{
-      role: 'user',
-      content
-    }]);
-
-    // Mapear os dados extraídos
-    if (extractedBriefingData.companyInfo.name && !updatedData.company_name) {
-      updatedData.company_name = extractedBriefingData.companyInfo.name;
-      console.log('✅ Nome da empresa extraído:', extractedBriefingData.companyInfo.name);
-    }
-    if (extractedBriefingData.companyInfo.description && !updatedData.description) {
-      updatedData.description = extractedBriefingData.companyInfo.description;
-      console.log('✅ Descrição extraída');
-    }
-    if (extractedBriefingData.companyInfo.mission && !updatedData.mission) {
-      updatedData.mission = extractedBriefingData.companyInfo.mission;
-      console.log('✅ Missão extraída');
-    }
-    if (extractedBriefingData.companyInfo.vision && !updatedData.vision) {
-      updatedData.vision = extractedBriefingData.companyInfo.vision;
-      console.log('✅ Visão extraída');
-    }
-    if (extractedBriefingData.companyInfo.values && !updatedData.values) {
-      updatedData.values = extractedBriefingData.companyInfo.values;
-      console.log('✅ Valores extraídos');
-    }
-    if (extractedBriefingData.companyInfo.slogan && !updatedData.slogan) {
-      updatedData.slogan = extractedBriefingData.companyInfo.slogan;
-      console.log('✅ Slogan extraído');
-    }
-    if (extractedBriefingData.productsServices.main && !updatedData.products_services) {
-      updatedData.products_services = extractedBriefingData.productsServices.main;
-      console.log('✅ Produtos/serviços extraídos');
-    }
-    if (extractedBriefingData.targetAudience.ideal && !updatedData.target_audience) {
-      updatedData.target_audience = extractedBriefingData.targetAudience.ideal;
-      console.log('✅ Público-alvo extraído');
-    }
-    if (extractedBriefingData.socialProof.clients && !updatedData.social_proof) {
-      updatedData.social_proof = extractedBriefingData.socialProof.clients;
-      console.log('✅ Prova social extraída');
-    }
-    if (extractedBriefingData.design.style && !updatedData.design_preferences) {
-      updatedData.design_preferences = extractedBriefingData.design.style;
-      console.log('✅ Preferências de design extraídas');
-    }
-    if (extractedBriefingData.contact.channels && !updatedData.contact_info) {
-      updatedData.contact_info = extractedBriefingData.contact.channels;
-      console.log('✅ Informações de contato extraídas');
-    }
-    if (extractedBriefingData.objectives.main && !updatedData.website_objective) {
-      updatedData.website_objective = extractedBriefingData.objectives.main;
-      console.log('✅ Objetivo do site extraído');
-    }
-
-    // Preparar histórico completo da conversa
+  const saveConversationHistory = async (messages: Message[], uploadedFiles: string[] = []): Promise<void> => {
     const historico = messages.map(msg => ({
       role: msg.role,
       content: msg.content,
@@ -239,56 +152,69 @@ export const useDataCollection = (sessionId: string) => {
       hasAudio: !!msg.audioBlob
     }));
 
-    // Atualizar dados com histórico
-    updatedData.historico_conversa = historico;
-    updatedData.conversation_log = historico;
+    const updatedData = {
+      ...collectedData,
+      historico_conversa: historico,
+      conversation_log: historico,
+      uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFiles]
+    };
 
-    console.log('💾 Dados preparados para salvar:', {
-      session_id: updatedData.session_id,
-      user_name: updatedData.user_name,
-      user_whatsapp: updatedData.user_whatsapp,
-      company_name: updatedData.company_name,
-      totalMessages: historico.length,
-      timestamp: new Date().toISOString()
-    });
+    setCollectedData(updatedData);
 
-    // SALVAR IMEDIATAMENTE NO BANCO com retry logic
     try {
       await saveDataToSupabase(updatedData);
     } catch (error) {
-      console.error('❌ FALHA FINAL AO SALVAR DADOS:', error);
-      // Não propagar o erro para não quebrar a interface
+      console.error('❌ FALHA AO SALVAR HISTÓRICO:', error);
     }
-    
-    return updatedData;
   };
 
-  const calculateProgress = (data: Partial<CollectedData>): number => {
-    const requiredFields = [
-      'user_name', 'user_whatsapp', 'company_name', 'description', 
-      'mission', 'vision', 'values', 'products_services', 
-      'target_audience', 'social_proof', 'design_preferences', 
-      'contact_info', 'website_objective', 'additional_info'
-    ];
-    
-    const filledFields = requiredFields.filter(field => {
-      const value = data[field as keyof CollectedData];
-      return value && String(value).trim() !== '';
-    });
-    
-    const progress = Math.round((filledFields.length / requiredFields.length) * 100);
-    console.log(`📊 Progresso: ${filledFields.length}/${requiredFields.length} campos (${progress}%)`);
-    console.log('✅ Campos preenchidos:', filledFields);
-    console.log('❌ Campos faltando:', requiredFields.filter(f => !filledFields.includes(f)));
-    
-    return progress;
+  const analyzeFinalConversation = async (messages: Message[]): Promise<Partial<CollectedData>> => {
+    try {
+      console.log('🔍 Iniciando análise final da conversa...');
+      
+      const historico = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp.toISOString(),
+        files: msg.files?.map(f => f.name) || [],
+        hasAudio: !!msg.audioBlob
+      }));
+
+      const { data: responseData, error } = await supabase.functions.invoke('analyze-conversation', {
+        body: {
+          historico_conversa: historico,
+          session_id: sessionId
+        }
+      });
+
+      if (error) throw new Error(`Erro na análise: ${error.message}`);
+      if (!responseData.success) throw new Error(responseData.error || 'Erro na análise');
+
+      const finalData = {
+        ...collectedData,
+        ...responseData.data,
+        historico_conversa: historico,
+        conversation_log: historico,
+        status: 'completed' as const
+      };
+
+      console.log('✅ Análise final concluída:', finalData);
+      
+      await saveDataToSupabase(finalData);
+      setCollectedData(finalData);
+      
+      return finalData;
+    } catch (error) {
+      console.error('❌ Erro na análise final:', error);
+      throw error;
+    }
   };
 
   return {
     collectedData,
     setCollectedData,
-    extractAndSaveData,
-    calculateProgress,
+    saveConversationHistory,
+    analyzeFinalConversation,
     saveDataToSupabase,
     isSaving
   };

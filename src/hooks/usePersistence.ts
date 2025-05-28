@@ -5,8 +5,6 @@ interface PersistedData {
   sessionId: string;
   messages: any[];
   collectedData: any;
-  currentBlock: number;
-  currentProgress: number;
   lastActivity: number;
 }
 
@@ -15,7 +13,6 @@ export const usePersistence = (sessionId: string) => {
   const [persistedData, setPersistedData] = useState<PersistedData | null>(null);
 
   const STORAGE_KEY = `briefing_session_${sessionId}`;
-  const ACTIVITY_THRESHOLD = 24 * 60 * 60 * 1000; // 24 horas em milliseconds
 
   const saveToStorage = (data: Partial<PersistedData>) => {
     try {
@@ -31,7 +28,7 @@ export const usePersistence = (sessionId: string) => {
       const updatedData = {
         ...existingData,
         ...data,
-        sessionId: sessionId, // Garantir que o sessionId está correto
+        sessionId: sessionId,
         lastActivity: Date.now()
       };
       
@@ -55,17 +52,14 @@ export const usePersistence = (sessionId: string) => {
       const parsed = JSON.parse(data);
       const now = Date.now();
       
-      // Verificar se os dados não são muito antigos (mais de 7 dias)
       if (parsed.lastActivity && (now - parsed.lastActivity) > (7 * 24 * 60 * 60 * 1000)) {
         console.log('🗑️ Dados antigos encontrados, removendo...');
         localStorage.removeItem(STORAGE_KEY);
         return null;
       }
 
-      // Verificar se o sessionId corresponde
       if (parsed.sessionId && parsed.sessionId !== sessionId) {
         console.log('⚠️ SessionId não corresponde, dados podem ser de outra sessão');
-        // Não remover, pois pode ser válido
       }
       
       console.log('✅ Dados carregados do localStorage:', {

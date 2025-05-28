@@ -39,8 +39,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     setEvaluation,
     evaluationComment,
     setEvaluationComment,
-    currentProgress,
-    setCurrentProgress,
     isInitialized,
     setIsInitialized
   } = useChatState(sessionId);
@@ -48,9 +46,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const {
     collectedData,
     setCollectedData,
-    extractAndSaveData,
-    calculateProgress,
-    saveDataToSupabase,
+    saveConversationHistory,
+    analyzeFinalConversation,
     isSaving
   } = useDataCollection(sessionId);
 
@@ -89,26 +86,33 @@ CAMPOS OBRIGATÓRIOS QUE DEVEM SER COLETADOS (TODOS):
 7. Público-alvo e suas necessidades
 8. Cases de sucesso e credibilidade (social_proof)
 9. Preferências de design e estilo visual
-10. **LOGOTIPO: Pergunte se a empresa já possui logotipo ou se precisa criar um**
+10. **LOGOTIPO: Pergunte se a empresa já possui logotipo. Se sim, PEÇA PARA ENVIAR O ARQUIVO**
 11. **DOMÍNIO: Pergunte se já possui domínio registrado ou se precisa adquirir um**
 12. Formas de contato e localização
 13. Objetivo principal do site
-14. Informações adicionais relevantes
+14. **LAYOUT: Se o cliente tiver algum layout em mente, SUGIRA para ele enviar uma imagem de referência (pode ser print de site ou qualquer referência visual)**
+15. Informações adicionais relevantes
+
+INSTRUÇÕES IMPORTANTES PARA AJUDAR CLIENTES:
+- **SEMPRE ofereça ajuda quando cliente não souber responder algo**
+- Se cliente aceitar ajuda, faça perguntas direcionadas para chegar na resposta
+- Se cliente disser "não sei", "vou decidir depois", "não tenho", aceite a resposta e registre como tal
+- Seja MUITO gentil e paciente
+- Use linguagem natural e conversacional
+- Se cliente tiver logo, PEÇA o arquivo
+- Se cliente tiver ideia de layout, PEÇA referência visual
+
+EXEMPLO DE COMO AJUDAR:
+Cliente: "Não sei qual é a missão da empresa"
+Sophia: "Sem problemas! Posso te ajudar a definir. Me conta: qual é o principal objetivo da sua empresa? O que vocês fazem de mais importante para seus clientes? Com base nisso posso sugerir uma missão que faça sentido. Quer que eu te ajude ou prefere pensar nisso depois?"
 
 ENCERRAMENTO DA CONVERSA:
-- SÓ encerre a conversa quando TODOS os 14 campos acima tiverem sido coletados
-- Antes de encerrar, verifique se alguma informação importante está faltando
-- Só depois de ter TODAS as informações, pergunte sobre a avaliação
+- SÓ encerre a conversa quando TODOS os 15 campos acima tiverem sido abordados
+- Antes de pedir avaliação, faça um RESUMO de tudo que foi coletado
+- Confirme com o cliente se está tudo correto
+- Só depois de confirmação, encerre com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"
 
-INSTRUÇÕES IMPORTANTES:
-- Seja sempre empática, natural e conversacional
-- Use linguagem casual mas profissional
-- Use emojis moderadamente
-- Sempre aguarde a resposta antes de fazer a próxima pergunta
-- Confirme informações importantes de forma natural
-- Se apresente como Sophia da Planner
-
-FINALIZE APENAS com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
+FINALIZE APENAS com a frase exata: "Consegui todas as informações necessárias para o desenvolvimento do seu site! Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -140,7 +144,6 @@ FINALIZE APENAS com: "Perfeito! Consegui todas as informações que precisava. A
           timestamp: new Date(msg.timestamp)
         })));
         setCollectedData(persistedData.collectedData || collectedData);
-        setCurrentProgress(persistedData.currentProgress || 0);
       } else {
         console.log('🆕 Iniciando nova conversa:', {
           sessionId,
@@ -174,11 +177,10 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
       saveToStorage({
         sessionId,
         messages,
-        collectedData,
-        currentProgress
+        collectedData
       });
     }
-  }, [messages, collectedData, currentProgress, isInitialized, sessionReady, sessionId]);
+  }, [messages, collectedData, isInitialized, sessionReady, sessionId]);
 
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
@@ -277,21 +279,11 @@ Tenha um excelente dia! 🚀✨`,
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
 
+    // Salvar histórico de conversa
     try {
-      console.log('🔍 Extraindo e salvando dados da mensagem...');
-      const extractedData = await extractAndSaveData(textToSend, collectedData, updatedMessages);
-      
-      const updatedData = {
-        ...extractedData,
-        uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFileUrls]
-      };
-      
-      setCollectedData(updatedData);
-      const newProgress = calculateProgress(updatedData);
-      setCurrentProgress(newProgress);
-
+      await saveConversationHistory(updatedMessages, uploadedFileUrls);
     } catch (error) {
-      console.error('❌ Erro crítico ao extrair/salvar dados:', error);
+      console.error('❌ Erro ao salvar histórico:', error);
     }
 
     setInputValue('');
@@ -334,31 +326,30 @@ Tenha um excelente dia! 🚀✨`,
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
 
-      const finalData = {
-        ...collectedData,
-        historico_conversa: finalMessages.map(msg => ({
-          role: msg.role,
-          content: msg.content,
-          timestamp: msg.timestamp.toISOString(),
-          files: msg.files?.map(f => f.name) || [],
-          hasAudio: !!msg.audioBlob
-        }))
-      };
-
+      // Salvar histórico atualizado
       try {
-        await saveDataToSupabase(finalData);
-        setCollectedData(finalData);
-      } catch (saveError) {
-        console.error('❌ Erro ao salvar dados finais:', saveError);
+        await saveConversationHistory(finalMessages, uploadedFileUrls);
+      } catch (error) {
+        console.error('❌ Erro ao salvar histórico final:', error);
       }
 
-      if (assistantResponse.includes('avaliar nosso atendimento')) {
-        setIsEvaluating(true);
+      // Verificar se a conversa foi finalizada
+      if (assistantResponse.includes('Consegui todas as informações necessárias')) {
+        console.log('🔍 Iniciando análise final da conversa...');
+        try {
+          const finalData = await analyzeFinalConversation(finalMessages);
+          setCollectedData(finalData);
+          console.log('✅ Análise final concluída, iniciando avaliação...');
+          setIsEvaluating(true);
+        } catch (error) {
+          console.error('❌ Erro na análise final:', error);
+          setIsEvaluating(true); // Continuar para avaliação mesmo com erro
+        }
       } else if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
         setIsCompleted(true);
         clearStorage();
         clearSessionId();
-        onDataCollected(finalData);
+        onDataCollected(collectedData);
       }
 
     } catch (error) {
