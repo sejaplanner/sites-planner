@@ -201,11 +201,7 @@ ENCERRAMENTO DA CONVERSA:
 
         const initialMessage: Message = {
           id: '1',
-          content: `Olá! Sou a **Sophia**, assistente virtual da **Planner** e estou aqui para te ajudar a criar um site incrível! 🚀
-
-Para iniciar, preciso saber:
-
-**Qual é o seu nome completo?** 😊`,
+          content: "Olá! Sou a **Sophia**, assistente virtual da **Planner** e estou aqui para te ajudar a criar um site incrível! 🚀\n\nPara iniciar, preciso saber:\n\n**Qual é o seu nome completo?** 😊",
           role: 'assistant',
           timestamp: new Date()
         };
