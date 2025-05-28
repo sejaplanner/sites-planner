@@ -19,6 +19,7 @@ export type Database = {
           description: string | null
           design_preferences: string | null
           differentials: string | null
+          historico_conversa: Json | null
           id: string
           mission: string | null
           products_services: string | null
@@ -44,6 +45,7 @@ export type Database = {
           description?: string | null
           design_preferences?: string | null
           differentials?: string | null
+          historico_conversa?: Json | null
           id?: string
           mission?: string | null
           products_services?: string | null
@@ -69,6 +71,7 @@ export type Database = {
           description?: string | null
           design_preferences?: string | null
           differentials?: string | null
+          historico_conversa?: Json | null
           id?: string
           mission?: string | null
           products_services?: string | null

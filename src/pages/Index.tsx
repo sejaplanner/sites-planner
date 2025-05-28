@@ -18,7 +18,8 @@ const Index = () => {
   };
 
   if (!chatStarted) {
-    return <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent)] pointer-events-none"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.08),transparent)] pointer-events-none"></div>
@@ -27,7 +28,11 @@ const Index = () => {
           {/* Header */}
           <div className="text-center mb-12 md:mb-20">
             <div className="flex items-center justify-center gap-3 mb-12">
-              <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-16 md:h-24 w-auto drop-shadow-lg" />
+              <img 
+                src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
+                alt="Planner Logo" 
+                className="h-16 md:h-24 w-auto drop-shadow-lg" 
+              />
             </div>
             
             {/* Main Headlines with Premium Typography */}
@@ -57,7 +62,7 @@ const Index = () => {
               <p className="text-lg md:text-xl lg:text-2xl text-gray-600 leading-relaxed font-light mb-2">
                 Nossa{' '}
                 <span className="relative">
-                  <span className="font-medium text-gray-800">assistente virtual inteligente</span>
+                  <span className="font-medium text-gray-800">assistente virtual Sophia</span>
                   <div className="absolute -bottom-0.5 md:-bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-purple-400 to-blue-400 rounded-full opacity-50"></div>
                 </span>{' '}
                 irá conversar com você para entender todos os detalhes da sua empresa 
@@ -98,9 +103,13 @@ const Index = () => {
                   logo, fotos e outros materiais durante a conversa.
                 </p>
                 
-                <Button onClick={() => setChatStarted(true)} size="lg" className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-8 md:px-12 lg:px-16 py-4 md:py-5 text-lg md:text-xl font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group">
+                <Button 
+                  onClick={() => setChatStarted(true)} 
+                  size="lg" 
+                  className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-8 md:px-12 lg:px-16 py-4 md:py-5 text-lg md:text-xl font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group"
+                >
                   <MessageSquare className="w-5 md:w-6 h-5 md:h-6 mr-3 group-hover:scale-110 transition-transform" />
-                  Iniciar Conversa
+                  Conversar com Sophia
                   <ArrowRight className="w-5 md:w-6 h-5 md:h-6 ml-3 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
@@ -158,15 +167,21 @@ const Index = () => {
             </PrivacyPolicyModal>
           </div>
         </div>
-      </div>;
+      </div>
+    );
   }
 
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex flex-col h-screen overflow-hidden">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex flex-col h-screen overflow-hidden w-full max-w-full">
       {/* Header do chat - NAVBAR FIXA */}
-      <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 md:p-4 fixed top-0 left-0 right-0 z-50 shadow-sm">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 md:p-4 fixed top-0 left-0 right-0 z-50 shadow-sm w-full">
+        <div className="max-w-4xl mx-auto flex items-center justify-between w-full">
           <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-            <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-8 md:h-10 w-auto flex-shrink-0" />
+            <img 
+              src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" 
+              alt="Planner Logo" 
+              className="h-8 md:h-10 w-auto flex-shrink-0" 
+            />
             
             {/* Barra de progresso compacta no mobile */}
             <div className="block md:hidden flex-1 mx-2 min-w-0">
@@ -174,7 +189,12 @@ const Index = () => {
             </div>
           </div>
           
-          <Button variant="outline" onClick={() => setChatStarted(false)} className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50" size="sm">
+          <Button 
+            variant="outline" 
+            onClick={() => setChatStarted(false)} 
+            className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50" 
+            size="sm"
+          >
             <X className="w-4 h-4 md:hidden" />
             <span className="hidden md:inline text-xs md:text-sm px-2 md:px-4 py-1 md:py-2">
               Voltar ao Início
@@ -184,10 +204,11 @@ const Index = () => {
       </div>
 
       {/* Interface do chat - Espaço para navbar fixa */}
-      <div className="flex-1 pt-16 md:pt-20 min-h-0 overflow-hidden">
+      <div className="flex-1 pt-16 md:pt-20 min-h-0 overflow-hidden w-full max-w-full">
         <ChatInterface onDataCollected={handleDataCollected} />
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default Index;

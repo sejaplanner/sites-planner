@@ -12,6 +12,7 @@ import AudioPlayer from './AudioPlayer';
 import ImagePreview from './ImagePreview';
 import { usePersistence } from '@/hooks/usePersistence';
 import { extractUserName, extractWhatsApp, extractDataFromConversation } from '@/utils/dataExtraction';
+
 interface Message {
   id: string;
   content: string;
@@ -122,15 +123,8 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
     }
   }, [messages, collectedData, currentProgress, isInitialized]);
 
-  // Calcular progresso baseado nos dados coletados
-  const calculateProgress = (data: Partial<CollectedData>): number => {
-    const fields = ['user_name', 'user_whatsapp', 'company_name', 'description', 'mission', 'products_services', 'target_audience', 'social_proof', 'design_preferences', 'contact_info', 'website_objective'];
-    const filledFields = fields.filter(field => data[field as keyof CollectedData] && String(data[field as keyof CollectedData]).trim() !== '');
-    return Math.round(filledFields.length / fields.length * 100);
-  };
-
-  // Sistema de prompt atualizado com informações sobre logo e domínio
-  const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
+  // Sistema de prompt atualizado com nome Sophia e informações sobre logo e domínio
+  const systemPrompt = `Você é Sophia, uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
 
 SOBRE A PLANNER:
 A Planner é uma empresa de Gestão Inteligente de Negócios, especializada na análise e otimização de processos por meio de organização estratégica e soluções tecnológicas personalizadas. Unimos experiência prática em gestão com inovação digital, atuando de forma integrada nos setores público e privado.
@@ -143,32 +137,31 @@ O QUE FAZEMOS:
 - Treinamentos e Palestras: formação de equipes e capacitação de líderes em gestão e tecnologia
 - Soluções Integradas: combinamos gestão, engenharia, jurídico, contábil e TI para entregar projetos completos
 
-SEGURANÇA E PRIVACIDADE (LGPD):
-Todas as informações coletadas são protegidas conforme a LGPD. Coletamos dados com consentimento expresso, utilizamos apenas para desenvolvimento do projeto, implementamos medidas de segurança adequadas e não compartilhamos com terceiros sem autorização. Você tem direito ao acesso, correção, exclusão e portabilidade dos seus dados.
-
 REGRA FUNDAMENTAL - INFORMAÇÕES OBRIGATÓRIAS PRIMEIRO:
 - O PROCESSO SÓ DEVE INICIAR se o usuário fornecer NOME COMPLETO e NÚMERO DO WHATSAPP (com DDD)
 - Se o usuário não fornecer essas informações essenciais, insista educadamente até obter ambos
 - NÃO prossiga para outros tópicos até ter essas duas informações cruciais
 
-ESTRATÉGIA DE PERGUNTAS ABERTAS:
-- SEMPRE faça perguntas ABERTAS que permitam múltiplas informações de uma vez
-- Se o usuário fornecer informações que respondem várias perguntas futuras, colete todas automaticamente
-- NÃO repita perguntas sobre informações já fornecidas
-- Seja estratégica: uma pergunta bem feita pode coletar informações de vários blocos
-
-INFORMAÇÕES ESSENCIAIS PARA COLETAR:
+CAMPOS OBRIGATÓRIOS QUE DEVEM SER COLETADOS (TODOS):
 1. Nome completo e WhatsApp (OBRIGATÓRIO PRIMEIRO)
 2. Nome da empresa e descrição do negócio
-3. Missão, visão e valores
-4. Produtos/serviços oferecidos
-5. Público-alvo e suas necessidades
-6. Cases de sucesso e credibilidade
-7. Preferências de design e estilo visual
-8. **LOGOTIPO: Pergunte se a empresa já possui logotipo ou se precisa criar um**
-9. **DOMÍNIO: Pergunte se já possui domínio registrado ou se precisa adquirir um**
-10. Formas de contato e localização
-11. Objetivo principal do site
+3. Missão da empresa
+4. Visão da empresa  
+5. Valores da empresa
+6. Produtos/serviços oferecidos
+7. Público-alvo e suas necessidades
+8. Cases de sucesso e credibilidade (social_proof)
+9. Preferências de design e estilo visual
+10. **LOGOTIPO: Pergunte se a empresa já possui logotipo ou se precisa criar um**
+11. **DOMÍNIO: Pergunte se já possui domínio registrado ou se precisa adquirir um**
+12. Formas de contato e localização
+13. Objetivo principal do site
+14. Informações adicionais relevantes
+
+ENCERRAMENTO DA CONVERSA:
+- SÓ encerre a conversa quando TODOS os 14 campos acima tiverem sido coletados
+- Antes de encerrar, verifique se alguma informação importante está faltando
+- Só depois de ter TODAS as informações, pergunte sobre a avaliação
 
 INSTRUÇÕES IMPORTANTES:
 - Seja sempre empática, natural e conversacional
@@ -176,8 +169,139 @@ INSTRUÇÕES IMPORTANTES:
 - Use emojis moderadamente
 - Sempre aguarde a resposta antes de fazer a próxima pergunta
 - Confirme informações importantes de forma natural
+- Se apresente como Sophia da Planner
 
-FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
+FINALIZE APENAS com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
+
+  // Função melhorada para extrair e salvar dados
+  const extractAndSaveData = async (content: string, existingData: Partial<CollectedData>, messages: Message[]): Promise<Partial<CollectedData>> => {
+    const updatedData = { ...existingData };
+    
+    console.log('🔍 Extraindo dados da mensagem:', content);
+
+    // Extrair nome do usuário
+    if (!updatedData.user_name) {
+      const name = extractUserName(content);
+      if (name) {
+        updatedData.user_name = name;
+        console.log('✅ Nome extraído:', name);
+      }
+    }
+
+    // Extrair WhatsApp
+    if (!updatedData.user_whatsapp) {
+      const whatsapp = extractWhatsApp(content);
+      if (whatsapp) {
+        updatedData.user_whatsapp = whatsapp;
+        console.log('✅ WhatsApp extraído:', whatsapp);
+      }
+    }
+
+    // Extrair dados usando a função do utils
+    const extractedBriefingData = extractDataFromConversation([{
+      role: 'user',
+      content
+    }]);
+
+    // Mapear os dados extraídos
+    if (extractedBriefingData.companyInfo.name && !updatedData.company_name) {
+      updatedData.company_name = extractedBriefingData.companyInfo.name;
+      console.log('✅ Nome da empresa extraído:', extractedBriefingData.companyInfo.name);
+    }
+    if (extractedBriefingData.companyInfo.description && !updatedData.description) {
+      updatedData.description = extractedBriefingData.companyInfo.description;
+      console.log('✅ Descrição extraída');
+    }
+    if (extractedBriefingData.companyInfo.mission && !updatedData.mission) {
+      updatedData.mission = extractedBriefingData.companyInfo.mission;
+      console.log('✅ Missão extraída');
+    }
+    if (extractedBriefingData.companyInfo.vision && !updatedData.vision) {
+      updatedData.vision = extractedBriefingData.companyInfo.vision;
+      console.log('✅ Visão extraída');
+    }
+    if (extractedBriefingData.companyInfo.values && !updatedData.values) {
+      updatedData.values = extractedBriefingData.companyInfo.values;
+      console.log('✅ Valores extraídos');
+    }
+    if (extractedBriefingData.companyInfo.slogan && !updatedData.slogan) {
+      updatedData.slogan = extractedBriefingData.companyInfo.slogan;
+      console.log('✅ Slogan extraído');
+    }
+    if (extractedBriefingData.productsServices.main && !updatedData.products_services) {
+      updatedData.products_services = extractedBriefingData.productsServices.main;
+      console.log('✅ Produtos/serviços extraídos');
+    }
+    if (extractedBriefingData.targetAudience.ideal && !updatedData.target_audience) {
+      updatedData.target_audience = extractedBriefingData.targetAudience.ideal;
+      console.log('✅ Público-alvo extraído');
+    }
+    if (extractedBriefingData.socialProof.clients && !updatedData.social_proof) {
+      updatedData.social_proof = extractedBriefingData.socialProof.clients;
+      console.log('✅ Prova social extraída');
+    }
+    if (extractedBriefingData.design.style && !updatedData.design_preferences) {
+      updatedData.design_preferences = extractedBriefingData.design.style;
+      console.log('✅ Preferências de design extraídas');
+    }
+    if (extractedBriefingData.contact.channels && !updatedData.contact_info) {
+      updatedData.contact_info = extractedBriefingData.contact.channels;
+      console.log('✅ Informações de contato extraídas');
+    }
+    if (extractedBriefingData.objectives.main && !updatedData.website_objective) {
+      updatedData.website_objective = extractedBriefingData.objectives.main;
+      console.log('✅ Objetivo do site extraído');
+    }
+
+    // Preparar histórico completo da conversa
+    const historico = messages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      timestamp: msg.timestamp.toISOString(),
+      files: msg.files?.map(f => f.name) || [],
+      hasAudio: !!msg.audioBlob
+    }));
+
+    // Atualizar dados com histórico
+    updatedData.historico_conversa = historico;
+    updatedData.conversation_log = historico;
+
+    console.log('💾 Dados atualizados para salvar:', {
+      session_id: updatedData.session_id,
+      user_name: updatedData.user_name,
+      user_whatsapp: updatedData.user_whatsapp,
+      company_name: updatedData.company_name,
+      totalMessages: historico.length
+    });
+
+    // SALVAR IMEDIATAMENTE NO BANCO
+    await saveDataToSupabase(updatedData);
+    
+    return updatedData;
+  };
+
+  // Calcular progresso baseado nos campos obrigatórios
+  const calculateProgress = (data: Partial<CollectedData>): number => {
+    const requiredFields = [
+      'user_name', 'user_whatsapp', 'company_name', 'description', 
+      'mission', 'vision', 'values', 'products_services', 
+      'target_audience', 'social_proof', 'design_preferences', 
+      'contact_info', 'website_objective', 'additional_info'
+    ];
+    
+    const filledFields = requiredFields.filter(field => {
+      const value = data[field as keyof CollectedData];
+      return value && String(value).trim() !== '';
+    });
+    
+    const progress = Math.round((filledFields.length / requiredFields.length) * 100);
+    console.log(`📊 Progresso: ${filledFields.length}/${requiredFields.length} campos (${progress}%)`);
+    console.log('✅ Campos preenchidos:', filledFields);
+    console.log('❌ Campos faltando:', requiredFields.filter(f => !filledFields.includes(f)));
+    
+    return progress;
+  };
+
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
     for (const file of files) {
@@ -294,6 +418,7 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora go
         additional_info: data.additional_info,
         uploaded_files: data.uploaded_files,
         conversation_log: data.conversation_log,
+        historico_conversa: data.historico_conversa,
         status: data.status,
         created_at: data.created_at,
         updated_at: new Date().toISOString()
@@ -384,57 +509,55 @@ Tenha um excelente dia! 🚀✨`,
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
 
-    // Extrair dados IMEDIATAMENTE da mensagem do usuário
-    const extractedData = extractDataFromMessage(textToSend, collectedData);
+    // EXTRAIR E SALVAR DADOS IMEDIATAMENTE
+    try {
+      const extractedData = await extractAndSaveData(textToSend, collectedData, updatedMessages);
+      
+      // Atualizar dados coletados
+      const updatedData = {
+        ...extractedData,
+        uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFileUrls]
+      };
+      
+      setCollectedData(updatedData);
 
-    // Atualizar dados coletados
-    const updatedData = {
-      ...extractedData,
-      uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFileUrls],
-      conversation_log: updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        files: msg.files?.map(f => f.name),
-        hasAudio: !!msg.audioBlob
-      }))
-    };
-    setCollectedData(updatedData);
+      // Calcular e atualizar progresso
+      const newProgress = calculateProgress(updatedData);
+      setCurrentProgress(newProgress);
 
-    // Calcular e atualizar progresso
-    const newProgress = calculateProgress(updatedData);
-    setCurrentProgress(newProgress);
+    } catch (error) {
+      console.error('❌ Erro crítico ao salvar dados:', error);
+    }
 
-    // Salvar IMEDIATAMENTE no Supabase
-    await saveDataToSupabase(updatedData);
-
-    // Clear inputs always
+    // Clear inputs
     setInputValue('');
     setFiles([]);
     setIsLoading(true);
+
     try {
       const conversationHistory = updatedMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       }));
-      const {
-        data: responseData,
-        error
-      } = await supabase.functions.invoke('chat-openai', {
+
+      const { data: responseData, error } = await supabase.functions.invoke('chat-openai', {
         body: {
-          messages: [{
-            role: 'system',
-            content: systemPrompt
-          }, ...conversationHistory],
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...conversationHistory
+          ],
           sessionId: sessionId
         }
       });
+
       if (error) {
         throw new Error(`Erro na Edge Function: ${error.message}`);
       }
+
       if (!responseData.success) {
         throw new Error(responseData.error || 'Erro desconhecido');
       }
+
       const assistantResponse = responseData.message;
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -442,8 +565,24 @@ Tenha um excelente dia! 🚀✨`,
         role: 'assistant',
         timestamp: new Date()
       };
+
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
+
+      // Salvar histórico completo após resposta da IA
+      const finalData = {
+        ...collectedData,
+        historico_conversa: finalMessages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp.toISOString(),
+          files: msg.files?.map(f => f.name) || [],
+          hasAudio: !!msg.audioBlob
+        }))
+      };
+
+      await saveDataToSupabase(finalData);
+      setCollectedData(finalData);
 
       // Verificar se chegou na avaliação
       if (assistantResponse.includes('avaliar nosso atendimento')) {
@@ -451,34 +590,9 @@ Tenha um excelente dia! 🚀✨`,
       } else if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
         setIsCompleted(true);
         clearStorage();
-        const finalData = {
-          ...updatedData,
-          status: 'completed' as const,
-          conversation_log: finalMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp,
-            files: msg.files?.map(f => f.name),
-            hasAudio: !!msg.audioBlob
-          }))
-        };
-        setCollectedData(finalData);
-        await saveDataToSupabase(finalData);
         onDataCollected(finalData);
-      } else {
-        const progressData = {
-          ...updatedData,
-          conversation_log: finalMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
-            timestamp: msg.timestamp,
-            files: msg.files?.map(f => f.name),
-            hasAudio: !!msg.audioBlob
-          }))
-        };
-        setCollectedData(progressData);
-        await saveDataToSupabase(progressData);
       }
+
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
       const errorMessage: Message = {
@@ -507,100 +621,193 @@ Tenha um excelente dia! 🚀✨`,
     }
   };
   if (persistenceLoading) {
-    return <div className="h-full flex items-center justify-center">
+    return (
+      <div className="h-full flex items-center justify-center">
         <div className="flex items-center gap-2 text-gray-600">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Carregando...</span>
         </div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="h-full flex flex-col max-w-full overflow-hidden">
+  return (
+    <div className="h-full flex flex-col max-w-full overflow-hidden">
       {/* Barra de Progresso - Apenas Desktop */}
-      
+      <div className="hidden md:block bg-white/95 backdrop-blur-sm border-b border-gray-200/50 p-3 md:p-4">
+        <div className="max-w-4xl mx-auto">
+          <ProgressBar currentProgress={currentProgress} isCompact={false} />
+        </div>
+      </div>
 
       <ScrollArea className="flex-1 p-3 md:p-4 min-h-0 max-w-full">
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto">
-          {messages.map(message => <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}>
-              <Card className={`max-w-[85%] md:max-w-[80%] p-3 md:p-4 break-words overflow-hidden ${message.role === 'user' ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' : 'bg-white border-gray-200 shadow-sm'}`}>
+          {messages.map((message) => (
+            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}>
+              <Card className={`max-w-[85%] md:max-w-[80%] p-3 md:p-4 break-words overflow-hidden ${
+                message.role === 'user' 
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
+                  : 'bg-white border-gray-200 shadow-sm'
+              }`}>
                 <div className="text-sm md:text-base leading-relaxed break-words">
-                  {message.role === 'assistant' ? <MarkdownContent content={message.content} /> : <div className="whitespace-pre-wrap break-words">{message.content}</div>}
+                  {message.role === 'assistant' ? (
+                    <MarkdownContent content={message.content} />
+                  ) : (
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
+                  )}
                 </div>
 
-                {message.files && message.files.length > 0 && <div className="mt-3 flex flex-wrap gap-2">
-                    {message.files.map((file, index) => <ImagePreview key={index} file={file} />)}
-                  </div>}
+                {message.files && message.files.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {message.files.map((file, index) => (
+                      <ImagePreview key={index} file={file} />
+                    ))}
+                  </div>
+                )}
 
-                {message.audioBlob && <div className="mt-3">
+                {message.audioBlob && (
+                  <div className="mt-3">
                     <AudioPlayer audioBlob={message.audioBlob} isUserMessage={message.role === 'user'} />
-                  </div>}
+                  </div>
+                )}
 
                 <div className="text-xs opacity-70 mt-2">
                   {message.timestamp.toLocaleTimeString()}
                 </div>
               </Card>
-            </div>)}
+            </div>
+          ))}
 
           {/* Sistema de Avaliação */}
-          {isEvaluating && <div className="flex justify-start max-w-full">
+          {isEvaluating && (
+            <div className="flex justify-start max-w-full">
               <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 max-w-[85%] md:max-w-[80%]">
                 <h3 className="font-semibold text-gray-800 mb-3">Como foi nossa conversa?</h3>
                 <div className="flex gap-2 mb-4">
-                  {[1, 2, 3, 4, 5].map(star => <Button key={star} variant="ghost" size="sm" onClick={() => setEvaluation(star)} className={`p-1 ${evaluation >= star ? 'text-yellow-500' : 'text-gray-300'}`}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Button
+                      key={star}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEvaluation(star)}
+                      className={`p-1 ${evaluation >= star ? 'text-yellow-500' : 'text-gray-300'}`}
+                    >
                       <Star className="w-6 h-6 fill-current" />
-                    </Button>)}
+                    </Button>
+                  ))}
                 </div>
-                <Input placeholder="Deixe um comentário (opcional)" value={evaluationComment} onChange={e => setEvaluationComment(e.target.value)} className="mb-3" />
-                <Button onClick={handleEvaluationSubmit} disabled={evaluation === 0} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white" size="sm">
+                <Input
+                  placeholder="Deixe um comentário (opcional)"
+                  value={evaluationComment}
+                  onChange={(e) => setEvaluationComment(e.target.value)}
+                  className="mb-3"
+                />
+                <Button
+                  onClick={handleEvaluationSubmit}
+                  disabled={evaluation === 0}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                  size="sm"
+                >
                   Enviar Avaliação
                 </Button>
               </Card>
-            </div>}
+            </div>
+          )}
 
-          {isLoading && <div className="flex justify-start">
+          {isLoading && (
+            <div className="flex justify-start">
               <Card className="p-3 md:p-4 bg-gray-50">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Analisando suas informações...</span>
+                  <span className="text-sm">Sophia está analisando suas informações...</span>
                 </div>
               </Card>
-            </div>}
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
 
-      {isCompleted && <div className="p-3 md:p-4 bg-green-50 border-t border-green-200 flex-shrink-0">
+      {isCompleted && (
+        <div className="p-3 md:p-4 bg-green-50 border-t border-green-200 flex-shrink-0">
           <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto">
             <CheckCircle2 className="w-5 h-5" />
             <span className="font-medium text-sm md:text-base">
               Briefing finalizado! Dados salvos com sucesso (ID: {sessionId})
             </span>
           </div>
-        </div>}
+        </div>
+      )}
 
-      {/* Barra de envio */}
-      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0 max-w-full">
+      {/* Barra de envio - Largura fixa para mobile */}
+      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0 w-full max-w-full">
         <div className="max-w-4xl mx-auto w-full">
-          {files.length > 0 && <div className="mb-3 flex flex-wrap gap-2">
-              {files.map((file, index) => <ImagePreview key={index} file={file} onRemove={() => removeFile(index)} showRemove={true} />)}
-            </div>}
+          {files.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {files.map((file, index) => (
+                <ImagePreview 
+                  key={index} 
+                  file={file} 
+                  onRemove={() => removeFile(index)} 
+                  showRemove={true} 
+                />
+              ))}
+            </div>
+          )}
 
-          <div className="flex gap-2 w-full">
-            <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} className="shrink-0 h-10 w-10" disabled={isCompleted || isEvaluating}>
+          <div className="flex gap-2 w-full min-w-0">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => fileInputRef.current?.click()}
+              className="shrink-0 h-10 w-10"
+              disabled={isCompleted || isEvaluating}
+            >
               <Upload className="w-4 h-4" />
             </Button>
             
             <AudioRecorder onAudioRecorded={handleAudioRecorded} />
             
-            <Input ref={fileInputRef} type="file" multiple accept="image/*" onChange={handleFileUpload} className="hidden" />
+            <Input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
             
-            <Input value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} placeholder={isCompleted ? "Briefing finalizado" : isEvaluating ? "Aguardando avaliação..." : "Digite sua resposta..."} className="flex-1 text-sm md:text-base min-w-0" disabled={isLoading || isCompleted || isEvaluating} />
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={
+                isCompleted 
+                  ? "Briefing finalizado" 
+                  : isEvaluating 
+                    ? "Aguardando avaliação..." 
+                    : "Digite sua resposta..."
+              }
+              className="flex-1 text-sm md:text-base min-w-0"
+              disabled={isLoading || isCompleted || isEvaluating}
+            />
             
-            <Button onClick={() => handleSendMessage()} disabled={isLoading || isCompleted || isEvaluating || !inputValue.trim() && files.length === 0} className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10" size="icon">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <Button
+              onClick={() => handleSendMessage()}
+              disabled={isLoading || isCompleted || isEvaluating || (!inputValue.trim() && files.length === 0)}
+              className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10"
+              size="icon"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default ChatInterface;
