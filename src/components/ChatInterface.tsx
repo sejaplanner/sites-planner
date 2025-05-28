@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -303,13 +302,7 @@ ENCERRAMENTO DA CONVERSA:
       
       const finalMessage: Message = {
         id: (Date.now() + 2).toString(),
-        content: `Muito obrigada pela sua avaliação${evaluation >= 4 ? ' excelente' : ''}! ${evaluationComment ? 'Suas sugestões são muito valiosas para nós. ' : ''}
-
-🎉 **Briefing Finalizado com Sucesso!**
-
-Nossa equipe da Planner entrará em contato em breve através do WhatsApp informado para dar continuidade ao desenvolvimento do seu site institucional.
-
-Tenha um excelente dia! 🚀✨`,
+        content: "Muito obrigada pela sua avaliação" + (evaluation >= 4 ? " excelente" : "") + "! " + (evaluationComment ? "Suas sugestões são muito valiosas para nós. " : "") + "\n\n🎉 **Briefing Finalizado com Sucesso!**\n\nNossa equipe da Planner entrará em contato em breve através do WhatsApp informado para dar continuidade ao desenvolvimento do seu site institucional.\n\nTenha um excelente dia! 🚀✨",
         role: 'assistant',
         timestamp: new Date()
       };
