@@ -59,7 +59,7 @@ const Index = () => {
                 irá conversar com você para entender todos os detalhes da sua empresa 
                 e coletar as informações necessárias para desenvolvermos um{' '}
                 <span className="relative">
-                  <span className="font-medium text-gray-800">site institucional excepcional</span>
+                  <span className="font-medium text-gray-800">website excepcional</span>
                   <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full opacity-50"></div>
                 </span>.
               </p>
