@@ -22,6 +22,8 @@ export const useChatState = (sessionId: string) => {
   const [currentProgress, setCurrentProgress] = useState(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  console.log('🔧 useChatState inicializado para sessão:', sessionId);
+
   return {
     messages,
     setMessages,

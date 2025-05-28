@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -13,13 +12,14 @@ import MessageInput from './MessageInput';
 import { usePersistence } from '@/hooks/usePersistence';
 import { useChatState, type Message } from '@/hooks/useChatState';
 import { useDataCollection } from '@/hooks/useDataCollection';
+import { useSessionId } from '@/hooks/useSessionId';
 
 interface ChatInterfaceProps {
   onDataCollected: (data: any) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
-  const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const { sessionId, isInitialized: sessionReady, clearSessionId } = useSessionId();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -50,7 +50,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     setCollectedData,
     extractAndSaveData,
     calculateProgress,
-    saveDataToSupabase
+    saveDataToSupabase,
+    isSaving
   } = useDataCollection(sessionId);
 
   const {
@@ -118,16 +119,34 @@ FINALIZE APENAS com: "Perfeito! Consegui todas as informações que precisava. A
   }, [messages]);
 
   useEffect(() => {
-    if (!persistenceLoading && !isInitialized) {
+    console.log('🔧 ChatInterface - Estado de inicialização:', {
+      sessionReady,
+      persistenceLoading,
+      isInitialized,
+      sessionId,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!persistenceLoading && sessionReady && !isInitialized) {
       if (persistedData && persistedData.messages && persistedData.messages.length > 1) {
+        console.log('🔄 Recuperando sessão persistida:', {
+          sessionId: persistedData.sessionId,
+          messagesCount: persistedData.messages.length,
+          timestamp: new Date().toISOString()
+        });
+        
         setMessages(persistedData.messages.map(msg => ({
           ...msg,
           timestamp: new Date(msg.timestamp)
         })));
         setCollectedData(persistedData.collectedData || collectedData);
         setCurrentProgress(persistedData.currentProgress || 0);
-        console.log('Sessão recuperada:', persistedData);
       } else {
+        console.log('🆕 Iniciando nova conversa:', {
+          sessionId,
+          timestamp: new Date().toISOString()
+        });
+
         const initialMessage: Message = {
           id: '1',
           content: `Olá! Sou a **Sophia**, assistente virtual da **Planner** e estou aqui para te ajudar a criar um site institucional incrível! 🚀
@@ -142,10 +161,16 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
       }
       setIsInitialized(true);
     }
-  }, [persistenceLoading, persistedData, isInitialized]);
+  }, [persistenceLoading, persistedData, isInitialized, sessionReady, sessionId]);
 
   useEffect(() => {
-    if (isInitialized && messages.length > 0) {
+    if (isInitialized && messages.length > 0 && sessionReady) {
+      console.log('💾 Salvando no localStorage:', {
+        sessionId,
+        messagesCount: messages.length,
+        timestamp: new Date().toISOString()
+      });
+
       saveToStorage({
         sessionId,
         messages,
@@ -153,7 +178,7 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
         currentProgress
       });
     }
-  }, [messages, collectedData, currentProgress, isInitialized]);
+  }, [messages, collectedData, currentProgress, isInitialized, sessionReady, sessionId]);
 
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
@@ -227,6 +252,14 @@ Tenha um excelente dia! 🚀✨`,
     const filesToSend = messageFiles || files;
     if (!textToSend.trim() && filesToSend.length === 0 && !audioBlob) return;
 
+    console.log('📤 Enviando mensagem:', {
+      sessionId,
+      messageLength: textToSend.length,
+      filesCount: filesToSend.length,
+      hasAudio: !!audioBlob,
+      timestamp: new Date().toISOString()
+    });
+
     let uploadedFileUrls: string[] = [];
     if (filesToSend.length > 0) {
       uploadedFileUrls = await uploadFilesToSupabase(filesToSend);
@@ -245,6 +278,7 @@ Tenha um excelente dia! 🚀✨`,
     setMessages(updatedMessages);
 
     try {
+      console.log('🔍 Extraindo e salvando dados da mensagem...');
       const extractedData = await extractAndSaveData(textToSend, collectedData, updatedMessages);
       
       const updatedData = {
@@ -257,7 +291,7 @@ Tenha um excelente dia! 🚀✨`,
       setCurrentProgress(newProgress);
 
     } catch (error) {
-      console.error('❌ Erro crítico ao salvar dados:', error);
+      console.error('❌ Erro crítico ao extrair/salvar dados:', error);
     }
 
     setInputValue('');
@@ -269,6 +303,12 @@ Tenha um excelente dia! 🚀✨`,
         role: msg.role,
         content: msg.content
       }));
+
+      console.log('🤖 Enviando para IA:', {
+        sessionId,
+        messagesCount: conversationHistory.length,
+        timestamp: new Date().toISOString()
+      });
 
       const { data: responseData, error } = await supabase.functions.invoke('chat-openai', {
         body: {
@@ -305,14 +345,19 @@ Tenha um excelente dia! 🚀✨`,
         }))
       };
 
-      await saveDataToSupabase(finalData);
-      setCollectedData(finalData);
+      try {
+        await saveDataToSupabase(finalData);
+        setCollectedData(finalData);
+      } catch (saveError) {
+        console.error('❌ Erro ao salvar dados finais:', saveError);
+      }
 
       if (assistantResponse.includes('avaliar nosso atendimento')) {
         setIsEvaluating(true);
       } else if (assistantResponse.includes('Nossa equipe da Planner entrará em contato')) {
         setIsCompleted(true);
         clearStorage();
+        clearSessionId();
         onDataCollected(finalData);
       }
 
@@ -347,12 +392,12 @@ Tenha um excelente dia! 🚀✨`,
     }
   };
 
-  if (persistenceLoading) {
+  if (persistenceLoading || !sessionReady) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="flex items-center gap-2 text-gray-600">
           <Loader2 className="w-6 h-6 animate-spin" />
-          <span>Carregando...</span>
+          <span>Carregando sessão...</span>
         </div>
       </div>
     );
@@ -415,12 +460,14 @@ Tenha um excelente dia! 🚀✨`,
             />
           )}
 
-          {isLoading && (
+          {(isLoading || isSaving) && (
             <div className="flex justify-start">
               <Card className="p-3 md:p-4 bg-gray-50">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm">Sophia está analisando suas informações...</span>
+                  <span className="text-sm">
+                    {isSaving ? 'Salvando dados...' : 'Sophia está analisando suas informações...'}
+                  </span>
                 </div>
               </Card>
             </div>
@@ -443,7 +490,7 @@ Tenha um excelente dia! 🚀✨`,
       <MessageInput
         inputValue={inputValue}
         files={files}
-        isLoading={isLoading}
+        isLoading={isLoading || isSaving}
         isCompleted={isCompleted}
         isEvaluating={isEvaluating}
         onInputChange={setInputValue}

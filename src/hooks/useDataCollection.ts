@@ -29,6 +29,19 @@ interface CollectedData {
   created_at: string;
 }
 
+// Debounce utility
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
 export const useDataCollection = (sessionId: string) => {
   const [collectedData, setCollectedData] = useState<Partial<CollectedData>>({
     session_id: sessionId,
@@ -39,15 +52,28 @@ export const useDataCollection = (sessionId: string) => {
     uploaded_files: []
   });
 
-  const saveDataToSupabase = async (data: Partial<CollectedData>) => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveDataToSupabase = async (data: Partial<CollectedData>, retryCount = 0): Promise<void> => {
+    const maxRetries = 3;
+    const retryDelay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+
     try {
-      console.log('🔄 SALVANDO DADOS IMEDIATAMENTE NO SUPABASE:', {
+      console.log(`🔄 TENTATIVA ${retryCount + 1}/${maxRetries} - Salvando dados no Supabase:`, {
         session_id: data.session_id,
         user_name: data.user_name,
         user_whatsapp: data.user_whatsapp,
         company_name: data.company_name,
-        historico_length: data.historico_conversa?.length || 0
+        historico_length: data.historico_conversa?.length || 0,
+        timestamp: new Date().toISOString()
       });
+
+      if (isSaving) {
+        console.log('⚠️ Operação de salvamento já em andamento, pulando...');
+        return;
+      }
+
+      setIsSaving(true);
 
       const { error } = await supabase
         .from('client_briefings')
@@ -75,24 +101,60 @@ export const useDataCollection = (sessionId: string) => {
           status: data.status,
           created_at: data.created_at,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'session_id',
+          ignoreDuplicates: false
         });
 
       if (error) {
-        console.error('❌ ERRO CRÍTICO AO SALVAR:', error);
+        console.error(`❌ ERRO NA TENTATIVA ${retryCount + 1}:`, error);
+        
+        // Verificar se é erro de duplicação
+        if (error.message?.includes('duplicate key') && retryCount < maxRetries) {
+          console.log(`🔄 Erro de duplicação detectado, tentando novamente em ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return saveDataToSupabase(data, retryCount + 1);
+        }
+        
         throw error;
       } else {
-        console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!');
+        console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!', {
+          session_id: data.session_id,
+          attempt: retryCount + 1,
+          timestamp: new Date().toISOString()
+        });
       }
     } catch (error) {
-      console.error('❌ ERRO DE CONEXÃO COM BANCO:', error);
+      console.error('❌ ERRO CRÍTICO DE CONEXÃO COM BANCO:', {
+        error,
+        session_id: data.session_id,
+        attempt: retryCount + 1,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Tentando novamente em ${retryDelay}ms... (tentativa ${retryCount + 2}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return saveDataToSupabase(data, retryCount + 1);
+      }
+      
       throw error;
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  // Debounced version of save function
+  const debouncedSave = debounce(saveDataToSupabase, 500);
 
   const extractAndSaveData = async (content: string, existingData: Partial<CollectedData>, messages: Message[]): Promise<Partial<CollectedData>> => {
     const updatedData = { ...existingData };
     
-    console.log('🔍 Extraindo dados da mensagem:', content);
+    console.log('🔍 Extraindo dados da mensagem:', {
+      content: content.substring(0, 100) + '...',
+      session_id: updatedData.session_id,
+      timestamp: new Date().toISOString()
+    });
 
     // Extrair nome do usuário
     if (!updatedData.user_name) {
@@ -181,16 +243,22 @@ export const useDataCollection = (sessionId: string) => {
     updatedData.historico_conversa = historico;
     updatedData.conversation_log = historico;
 
-    console.log('💾 Dados atualizados para salvar:', {
+    console.log('💾 Dados preparados para salvar:', {
       session_id: updatedData.session_id,
       user_name: updatedData.user_name,
       user_whatsapp: updatedData.user_whatsapp,
       company_name: updatedData.company_name,
-      totalMessages: historico.length
+      totalMessages: historico.length,
+      timestamp: new Date().toISOString()
     });
 
-    // SALVAR IMEDIATAMENTE NO BANCO
-    await saveDataToSupabase(updatedData);
+    // SALVAR IMEDIATAMENTE NO BANCO com retry logic
+    try {
+      await saveDataToSupabase(updatedData);
+    } catch (error) {
+      console.error('❌ FALHA FINAL AO SALVAR DADOS:', error);
+      // Não propagar o erro para não quebrar a interface
+    }
     
     return updatedData;
   };
@@ -221,7 +289,8 @@ export const useDataCollection = (sessionId: string) => {
     setCollectedData,
     extractAndSaveData,
     calculateProgress,
-    saveDataToSupabase
+    saveDataToSupabase,
+    isSaving
   };
 };
 
