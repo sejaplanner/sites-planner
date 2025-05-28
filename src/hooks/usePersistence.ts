@@ -6,6 +6,7 @@ interface PersistedData {
   messages: any[];
   collectedData: any;
   currentBlock: number;
+  currentProgress: number;
   lastActivity: number;
 }
 
