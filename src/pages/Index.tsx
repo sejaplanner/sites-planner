@@ -169,7 +169,7 @@ const Index = () => {
             </div>
             
             <div className="hidden md:block">
-              <p className="text-xs md:text-sm text-gray-600 font-medium">Assistente de Briefing</p>
+              
             </div>
           </div>
           
