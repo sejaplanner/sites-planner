@@ -24,6 +24,8 @@ interface CollectedData {
   uploaded_files?: string[];
   conversation_log: any[];
   historico_conversa?: any[];
+  user_evaluation?: number;
+  evaluation_comment?: string;
   status: 'in_progress' | 'completed';
   created_at: string;
 }
@@ -62,6 +64,8 @@ export const useDataCollection = (sessionId: string) => {
         user_name: data.user_name,
         user_whatsapp: data.user_whatsapp,
         company_name: data.company_name,
+        user_evaluation: data.user_evaluation,
+        evaluation_comment: data.evaluation_comment,
         historico_length: data.historico_conversa?.length || 0,
         timestamp: new Date().toISOString()
       });
@@ -96,6 +100,8 @@ export const useDataCollection = (sessionId: string) => {
           uploaded_files: data.uploaded_files,
           conversation_log: data.conversation_log,
           historico_conversa: data.historico_conversa,
+          user_evaluation: data.user_evaluation,
+          evaluation_comment: data.evaluation_comment,
           status: data.status,
           created_at: data.created_at,
           updated_at: new Date().toISOString()
@@ -165,6 +171,26 @@ export const useDataCollection = (sessionId: string) => {
       await saveDataToSupabase(updatedData);
     } catch (error) {
       console.error('❌ FALHA AO SALVAR HISTÓRICO:', error);
+    }
+  };
+
+  const saveEvaluation = async (evaluation: number, comment: string): Promise<void> => {
+    console.log('💾 Salvando avaliação:', { evaluation, comment, sessionId });
+
+    const updatedData = {
+      ...collectedData,
+      user_evaluation: evaluation,
+      evaluation_comment: comment
+    };
+
+    setCollectedData(updatedData);
+
+    try {
+      await saveDataToSupabase(updatedData);
+      console.log('✅ Avaliação salva com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao salvar avaliação:', error);
+      throw error;
     }
   };
 
@@ -272,6 +298,7 @@ export const useDataCollection = (sessionId: string) => {
     collectedData,
     setCollectedData,
     saveConversationHistory,
+    saveEvaluation,
     analyzeFinalConversation,
     saveDataToSupabase,
     isSaving

@@ -57,6 +57,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     collectedData,
     setCollectedData,
     saveConversationHistory,
+    saveEvaluation,
     analyzeFinalConversation,
     isSaving
   } = useDataCollection(sessionId);
@@ -266,7 +267,11 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
 
   const handleEvaluationSubmit = async () => {
     if (evaluation === 0) return;
+    
     try {
+      // Salvar avaliação no banco de dados
+      await saveEvaluation(evaluation, evaluationComment);
+      
       const finalMessage: Message = {
         id: (Date.now() + 2).toString(),
         content: `Muito obrigada pela sua avaliação${evaluation >= 4 ? ' excelente' : ''}! ${evaluationComment ? 'Suas sugestões são muito valiosas para nós. ' : ''}
@@ -451,10 +456,18 @@ Tenha um excelente dia! 🚀✨`,
 
   // Calcular CSS dinâmico baseado no estado do teclado
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
+  // Ajustar padding bottom quando avaliação estiver ativa
+  const evaluationPadding = isEvaluating ? (isMobile ? '160px' : '40px') : '0px';
+  
   const containerStyle = isMobile ? {
-    paddingBottom: keyboardState.isOpen ? `${Math.max(keyboardState.height, 280)}px` : '0px',
+    paddingBottom: keyboardState.isOpen 
+      ? `${Math.max(keyboardState.height, 280)}px` 
+      : evaluationPadding,
     transition: 'padding-bottom 0.3s ease-in-out'
-  } : {};
+  } : {
+    paddingBottom: evaluationPadding
+  };
 
   return (
     <div 
@@ -540,13 +553,11 @@ Tenha um excelente dia! 🚀✨`,
         </div>
       )}
 
-      {/* Barra de mensagens com posicionamento dinâmico */}
+      {/* Barra de mensagens com posicionamento fixo correto */}
       <div className={`w-full flex-shrink-0 ${
         isMobile 
-          ? keyboardState.isOpen 
-            ? 'fixed bottom-0 left-0 right-0 z-50' 
-            : 'fixed bottom-0 left-0 right-0 z-50'
-          : 'relative'
+          ? 'fixed bottom-0 left-0 right-0 z-50'
+          : 'sticky bottom-0 z-50'
       }`}>
         <MessageInput
           inputValue={inputValue}

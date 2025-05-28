@@ -19,6 +19,7 @@ export type Database = {
           description: string | null
           design_preferences: string | null
           differentials: string | null
+          evaluation_comment: string | null
           historico_conversa: Json | null
           id: string
           mission: string | null
@@ -30,6 +31,7 @@ export type Database = {
           target_audience: string | null
           updated_at: string | null
           uploaded_files: string[] | null
+          user_evaluation: number | null
           user_name: string | null
           user_whatsapp: string | null
           values: string | null
@@ -45,6 +47,7 @@ export type Database = {
           description?: string | null
           design_preferences?: string | null
           differentials?: string | null
+          evaluation_comment?: string | null
           historico_conversa?: Json | null
           id?: string
           mission?: string | null
@@ -56,6 +59,7 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string | null
           uploaded_files?: string[] | null
+          user_evaluation?: number | null
           user_name?: string | null
           user_whatsapp?: string | null
           values?: string | null
@@ -71,6 +75,7 @@ export type Database = {
           description?: string | null
           design_preferences?: string | null
           differentials?: string | null
+          evaluation_comment?: string | null
           historico_conversa?: Json | null
           id?: string
           mission?: string | null
@@ -82,6 +87,7 @@ export type Database = {
           target_audience?: string | null
           updated_at?: string | null
           uploaded_files?: string[] | null
+          user_evaluation?: number | null
           user_name?: string | null
           user_whatsapp?: string | null
           values?: string | null
