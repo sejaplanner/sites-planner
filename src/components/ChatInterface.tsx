@@ -12,6 +12,7 @@ import { usePersistence } from '@/hooks/usePersistence';
 import { useChatState, type Message } from '@/hooks/useChatState';
 import { useDataCollection } from '@/hooks/useDataCollection';
 import { useSessionId } from '@/hooks/useSessionId';
+import { useKeyboardState } from '@/hooks/useKeyboardState';
 
 interface ChatInterfaceProps {
   onDataCollected: (data: any) => void;
@@ -20,7 +21,17 @@ interface ChatInterfaceProps {
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   const { sessionId, isInitialized: sessionReady, clearSessionId } = useSessionId();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   
+  const {
+    keyboardState,
+    inputRef,
+    focusInput,
+    blurInput,
+    handleInputFocus,
+    handleInputBlur
+  } = useKeyboardState();
+
   const {
     messages,
     setMessages,
@@ -127,6 +138,26 @@ FINALIZE APENAS com a frase exata: "Consegui todas as informações necessárias
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Implementar auto-focus após envio de mensagem
+  useEffect(() => {
+    if (!isLoading && keyboardState.isInputFocused && inputRef.current) {
+      // Pequeno delay para garantir que a mensagem foi enviada
+      const timer = setTimeout(() => {
+        if (inputRef.current && !isCompleted && !isEvaluating) {
+          focusInput();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, messages.length, keyboardState.isInputFocused, isCompleted, isEvaluating]);
+
+  // Handle click fora do input para fechar teclado
+  const handleChatAreaClick = (e: React.MouseEvent) => {
+    if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
+      blurInput();
+    }
+  };
 
   useEffect(() => {
     console.log('🔧 ChatInterface - Estado de inicialização:', {
@@ -418,9 +449,23 @@ Tenha um excelente dia! 🚀✨`,
     );
   }
 
+  // Calcular CSS dinâmico baseado no estado do teclado
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const containerStyle = isMobile ? {
+    paddingBottom: keyboardState.isOpen ? `${Math.max(keyboardState.height, 280)}px` : '0px',
+    transition: 'padding-bottom 0.3s ease-in-out'
+  } : {};
+
   return (
-    <div className="h-full flex flex-col w-full max-w-full overflow-hidden">
-      <ScrollArea className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full">
+    <div 
+      className="h-full flex flex-col w-full max-w-full overflow-hidden relative"
+      style={containerStyle}
+    >
+      <ScrollArea 
+        className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full"
+        ref={chatContainerRef}
+        onClick={handleChatAreaClick}
+      >
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto w-full">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
@@ -495,19 +540,31 @@ Tenha um excelente dia! 🚀✨`,
         </div>
       )}
 
-      <MessageInput
-        inputValue={inputValue}
-        files={files}
-        isLoading={isLoading || isSaving}
-        isCompleted={isCompleted}
-        isEvaluating={isEvaluating}
-        onInputChange={setInputValue}
-        onFileUpload={handleFileUpload}
-        onRemoveFile={removeFile}
-        onSendMessage={handleSendMessage}
-        onAudioRecorded={handleAudioRecorded}
-        onKeyPress={handleKeyPress}
-      />
+      {/* Barra de mensagens com posicionamento dinâmico */}
+      <div className={`w-full flex-shrink-0 ${
+        isMobile 
+          ? keyboardState.isOpen 
+            ? 'fixed bottom-0 left-0 right-0 z-50' 
+            : 'fixed bottom-0 left-0 right-0 z-50'
+          : 'relative'
+      }`}>
+        <MessageInput
+          inputValue={inputValue}
+          files={files}
+          isLoading={isLoading || isSaving}
+          isCompleted={isCompleted}
+          isEvaluating={isEvaluating}
+          onInputChange={setInputValue}
+          onFileUpload={handleFileUpload}
+          onRemoveFile={removeFile}
+          onSendMessage={handleSendMessage}
+          onAudioRecorded={handleAudioRecorded}
+          onKeyPress={handleKeyPress}
+          inputRef={inputRef}
+          onInputFocus={handleInputFocus}
+          onInputBlur={handleInputBlur}
+        />
+      </div>
     </div>
   );
 };

@@ -19,6 +19,9 @@ interface MessageInputProps {
   onSendMessage: () => void;
   onAudioRecorded: (audioBlob: Blob) => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
+  inputRef?: React.RefObject<HTMLInputElement>;
+  onInputFocus?: () => void;
+  onInputBlur?: () => void;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
@@ -32,7 +35,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onRemoveFile,
   onSendMessage,
   onAudioRecorded,
-  onKeyPress
+  onKeyPress,
+  inputRef,
+  onInputFocus,
+  onInputBlur
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
@@ -61,7 +67,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const canSendMessage = !isLoading && !isCompleted && !isEvaluating && !isUploadingImages && (inputValue.trim() || files.length > 0);
 
   return (
-    <div className="border-t bg-white p-2 md:p-4 relative z-10 flex-shrink-0 w-full max-w-full">
+    <div className="border-t bg-white/95 backdrop-blur-sm p-2 md:p-4 relative z-10 flex-shrink-0 w-full max-w-full">
       <div className="max-w-4xl mx-auto w-full">
         {(files.length > 0 || isUploadingImages) && (
           <div className="mb-2 md:mb-3 flex flex-wrap gap-2">
@@ -96,14 +102,14 @@ const MessageInput: React.FC<MessageInputProps> = ({
             variant="outline"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 h-9 w-9 md:h-10 md:w-10 touch-manipulation"
+            className="shrink-0 h-10 w-10 md:h-11 md:w-11 touch-manipulation"
             disabled={isCompleted || isEvaluating || isUploadingImages}
             aria-label="Enviar arquivo"
           >
             {isUploadingImages ? (
-              <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
             ) : (
-              <Upload className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <Upload className="w-4 h-4 md:w-5 md:h-5" />
             )}
           </Button>
           
@@ -122,9 +128,12 @@ const MessageInput: React.FC<MessageInputProps> = ({
           />
           
           <Input
+            ref={inputRef}
             value={inputValue}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyPress={onKeyPress}
+            onFocus={onInputFocus}
+            onBlur={onInputBlur}
             placeholder={
               isCompleted 
                 ? "Briefing finalizado" 
@@ -134,7 +143,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
                     ? "Processando imagens..."
                     : "Digite sua resposta..."
             }
-            className="flex-1 text-sm md:text-base min-w-0 h-9 md:h-10 touch-manipulation"
+            className="flex-1 text-base min-w-0 h-10 md:h-11 touch-manipulation px-3 md:px-4"
             disabled={isLoading || isCompleted || isEvaluating || isUploadingImages}
             style={{ fontSize: '16px' }} // Previne zoom no iOS
           />
@@ -142,15 +151,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
           <Button
             onClick={handleSendClick}
             disabled={!canSendMessage}
-            className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-9 w-9 md:h-10 md:w-10 active:scale-95 transition-transform touch-manipulation"
+            className="shrink-0 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-10 w-10 md:h-11 md:w-11 active:scale-95 transition-transform touch-manipulation"
             size="icon"
             type="button"
             aria-label="Enviar mensagem"
           >
             {isLoading || isUploadingImages ? (
-              <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
             ) : (
-              <Send className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <Send className="w-4 h-4 md:w-5 md:h-5" />
             )}
           </Button>
         </div>
