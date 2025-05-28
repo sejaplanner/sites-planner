@@ -17,7 +17,7 @@ const Index = () => {
 
   if (!chatStarted) {
     return (
-      <div className="min-h-screen min-h-[100vh] min-h-[-webkit-fill-available] bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+      <div className="main-container bg-gradient-to-br from-gray-50 via-white to-gray-100 relative">
         {/* Background Elements */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.1),transparent)] pointer-events-none"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(59,130,246,0.08),transparent)] pointer-events-none"></div>
@@ -104,7 +104,7 @@ const Index = () => {
                 <Button 
                   onClick={() => setChatStarted(true)} 
                   size="lg" 
-                  className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-6 md:px-8 lg:px-12 xl:px-16 py-3 md:py-4 lg:py-5 text-base md:text-lg lg:text-xl font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group touch-manipulation"
+                  className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-6 md:px-8 lg:px-12 xl:px-16 py-3 md:py-4 lg:py-5 text-base md:text-lg lg:text-xl font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group touch-manipulation min-h-[48px]"
                 >
                   <MessageSquare className="w-4 md:w-5 lg:w-6 h-4 md:h-5 lg:h-6 mr-2 md:mr-3 group-hover:scale-110 transition-transform" />
                   Conversar com Sophia
@@ -151,12 +151,12 @@ const Index = () => {
           </div>
 
           {/* Mobile Carousel */}
-          <div className="mb-6 md:mb-8 lg:mb-12 px-2 md:px-4 md:hidden">
+          <div className="mb-8 md:mb-12 lg:mb-16 px-2 md:px-4 md:hidden">
             <MobileCarousel />
           </div>
 
-          {/* Footer */}
-          <div className="text-center mt-12 md:mt-16 lg:mt-20 text-gray-500 px-2 md:px-4">
+          {/* Footer com padding bottom maior para mobile */}
+          <div className="text-center mt-12 md:mt-16 lg:mt-20 pb-8 md:pb-4 text-gray-500 px-2 md:px-4">
             <p className="text-xs md:text-sm lg:text-base mb-3 md:mb-4 font-light">© 2024 Planner - Criamos experiências digitais excepcionais</p>
             <PrivacyPolicyModal>
               <button className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors font-light">
@@ -170,7 +170,7 @@ const Index = () => {
   }
 
   return (
-    <div className="h-screen h-[100vh] h-[-webkit-fill-available] bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex flex-col overflow-hidden w-full max-w-full ios-safe-area no-scroll-bounce">
+    <div className="chat-container bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 ios-safe-area no-scroll-bounce keyboard-adjust">
       {/* Header do chat - NAVBAR FIXA */}
       <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-2 md:p-3 lg:p-4 fixed top-0 left-0 right-0 z-50 shadow-sm w-full">
         <div className="max-w-4xl mx-auto flex items-center justify-between w-full">
@@ -185,7 +185,7 @@ const Index = () => {
           <Button 
             variant="outline" 
             onClick={() => setChatStarted(false)} 
-            className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50 touch-manipulation" 
+            className="text-gray-600 hover:text-gray-800 flex-shrink-0 border-gray-200 hover:bg-gray-50 touch-manipulation min-h-[44px]" 
             size="sm"
           >
             <X className="w-3.5 h-3.5 md:hidden" />

@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Send, X } from 'lucide-react';
+import { Mic, Square, Send, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface AudioRecorderProps {
@@ -99,15 +99,16 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
       <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-          <span className="text-sm text-red-600">{formatTime(recordingTime)}</span>
+          <span className="text-sm text-red-600 font-medium">{formatTime(recordingTime)}</span>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={stopRecording}
           className="h-8 w-8 text-red-600 hover:bg-red-100"
+          aria-label="Parar gravação"
         >
-          <MicOff className="w-4 h-4" />
+          <Square className="w-4 h-4 fill-current" />
         </Button>
       </div>
     );
@@ -121,7 +122,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
             <Mic className="w-4 h-4 text-purple-600" />
           </div>
           <div className="flex-1">
-            <div className="text-xs text-gray-600">Áudio gravado</div>
+            <div className="text-xs text-gray-600 font-medium">Áudio gravado</div>
             <div className="text-xs text-gray-500">{formatTime(recordingTime)}</div>
           </div>
         </div>
@@ -130,6 +131,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
           size="icon"
           onClick={cancelAudio}
           className="h-6 w-6 text-gray-500 hover:text-gray-700"
+          aria-label="Cancelar áudio"
         >
           <X className="w-3 h-3" />
         </Button>
@@ -137,6 +139,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
           onClick={sendAudio}
           size="icon"
           className="h-8 w-8 bg-purple-600 hover:bg-purple-700"
+          aria-label="Enviar áudio"
         >
           <Send className="w-4 h-4" />
         </Button>
@@ -149,10 +152,11 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
       variant="outline"
       size="icon"
       onClick={startRecording}
-      className="h-10 w-10"
+      className="h-9 w-9 md:h-10 md:w-10 shrink-0"
       disabled={disabled}
+      aria-label="Gravar áudio"
     >
-      <Mic className="w-4 h-4" />
+      <Mic className="w-3.5 h-3.5 md:w-4 md:h-4" />
     </Button>
   );
 };
