@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -230,7 +231,7 @@ ENCERRAMENTO DA CONVERSA:
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
     for (const file of files) {
-      const fileName = `${sessionId}/${Date.now()}_${file.name}`;
+      const fileName = sessionId + '/' + Date.now() + '_' + file.name;
       const { data, error } = await supabase.storage.from('client-files').upload(fileName, file);
       if (error) {
         console.error('Erro ao fazer upload:', error);
