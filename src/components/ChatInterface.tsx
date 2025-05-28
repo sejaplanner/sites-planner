@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -76,6 +75,13 @@ REGRA FUNDAMENTAL - INFORMAÇÕES OBRIGATÓRIAS PRIMEIRO:
 - Se o usuário não fornecer essas informações essenciais, insista educadamente até obter ambos
 - NÃO prossiga para outros tópicos até ter essas duas informações cruciais
 
+RECONHECIMENTO DE ARQUIVOS ENVIADOS:
+- SEMPRE reconheça quando o usuário enviar arquivos (imagens, documentos, etc.)
+- Quando receber uma imagem, diga explicitamente: "Recebi sua imagem! Obrigada por compartilhar [descreva brevemente o que vê ou o tipo de arquivo]"
+- Para logos: "Perfeito! Recebi o logo da sua empresa. Vou incluir isso no briefing."
+- Para referências de layout: "Excelente! Recebi a imagem de referência do layout. Esse estilo será considerado no desenvolvimento."
+- NUNCA diga que está aguardando um arquivo se ele já foi enviado
+
 CAMPOS OBRIGATÓRIOS QUE DEVEM SER COLETADOS (TODOS):
 1. Nome completo e WhatsApp (OBRIGATÓRIO PRIMEIRO)
 2. Nome da empresa e descrição do negócio
@@ -108,7 +114,7 @@ Sophia: "Sem problemas! Posso te ajudar a definir. Me conta: qual é o principal
 
 ENCERRAMENTO DA CONVERSA:
 - SÓ encerre a conversa quando TODOS os 15 campos acima tiverem sido abordados
-- Antes de pedir avaliação, faça um RESUMO de tudo que foi coletado
+- Antes de pedir avaliação, faça um RESUMO COMPLETO de tudo que foi coletado
 - Confirme com o cliente se está tudo correto
 - Só depois de confirmação, encerre com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"
 
@@ -265,6 +271,7 @@ Tenha um excelente dia! 🚀✨`,
     let uploadedFileUrls: string[] = [];
     if (filesToSend.length > 0) {
       uploadedFileUrls = await uploadFilesToSupabase(filesToSend);
+      console.log('📎 Arquivos enviados:', uploadedFileUrls);
     }
 
     const userMessage: Message = {
@@ -291,10 +298,27 @@ Tenha um excelente dia! 🚀✨`,
     setIsLoading(true);
 
     try {
-      const conversationHistory = updatedMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      // Preparar histórico para IA incluindo informação sobre arquivos
+      const conversationHistory = updatedMessages.map(msg => {
+        let content = msg.content;
+        
+        // Adicionar informação sobre arquivos enviados
+        if (msg.files && msg.files.length > 0) {
+          const fileDescriptions = msg.files.map(file => 
+            `[ARQUIVO ENVIADO: ${file.name}, tipo: ${file.type}]`
+          ).join(', ');
+          content = `${content}\n${fileDescriptions}`;
+        }
+        
+        if (msg.audioBlob) {
+          content = `${content}\n[ÁUDIO ENVIADO]`;
+        }
+        
+        return {
+          role: msg.role,
+          content: content
+        };
+      });
 
       console.log('🤖 Enviando para IA:', {
         sessionId,

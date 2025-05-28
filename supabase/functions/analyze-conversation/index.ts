@@ -9,6 +9,38 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Função para limpar e extrair JSON do texto
+function extractAndCleanJSON(text: string): any {
+  try {
+    // Remove markdown code blocks se existirem
+    let cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    
+    // Remove quebras de linha extras e espaços
+    cleanText = cleanText.trim();
+    
+    // Tenta fazer parse direto
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.log('❌ Primeira tentativa de parse falhou, tentando extrair JSON...');
+    
+    // Tenta encontrar um objeto JSON válido no texto
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        let jsonStr = jsonMatch[0];
+        // Remove markdown se houver
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        return JSON.parse(jsonStr);
+      } catch (secondError) {
+        console.log('❌ Segunda tentativa de parse falhou');
+        throw secondError;
+      }
+    }
+    
+    throw new Error('Não foi possível extrair JSON válido do texto');
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -29,10 +61,12 @@ serve(async (req) => {
 CONVERSA:
 ${conversationText}
 
+IMPORTANTE: Retorne APENAS um objeto JSON válido, sem formatação markdown, sem blocos de código, sem explicações adicionais.
+
 Extraia e organize as seguintes informações exatas mencionadas pelo usuário (use apenas o que foi explicitamente dito, não invente):
 
 1. user_name: Nome completo do usuário
-2. user_whatsapp: Número do WhatsApp (apenas números)
+2. user_whatsapp: Número do WhatsApp (apenas números, sem caracteres especiais)
 3. company_name: Nome da empresa
 4. slogan: Slogan/tagline da empresa
 5. mission: Missão da empresa
@@ -49,15 +83,29 @@ Extraia e organize as seguintes informações exatas mencionadas pelo usuário (
 16. additional_info: Informações sobre logo, domínio e outras informações relevantes
 
 Para campos onde a resposta foi "não sei", "vou decidir depois", "não tenho" ou similar, use exatamente essa resposta.
-Se algo não foi mencionado, deixe como null.
+Se algo não foi mencionado, use null.
 
-Retorne APENAS um JSON válido no formato:
+Retorne APENAS este formato JSON (sem markdown, sem \`\`\`):
 {
   "user_name": "valor ou null",
   "user_whatsapp": "valor ou null",
   "company_name": "valor ou null",
-  // ... outros campos
+  "slogan": "valor ou null",
+  "mission": "valor ou null",
+  "vision": "valor ou null",
+  "values": "valor ou null",
+  "description": "valor ou null",
+  "differentials": "valor ou null",
+  "products_services": "valor ou null",
+  "target_audience": "valor ou null",
+  "social_proof": "valor ou null",
+  "design_preferences": "valor ou null",
+  "contact_info": "valor ou null",
+  "website_objective": "valor ou null",
+  "additional_info": "valor ou null"
 }`;
+
+    console.log('🤖 Enviando para OpenAI...');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -68,7 +116,10 @@ Retorne APENAS um JSON válido no formato:
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'Você é um especialista em análise de conversas e extração de dados estruturados. Seja preciso e extraia apenas o que foi explicitamente mencionado.' },
+          { 
+            role: 'system', 
+            content: 'Você é um especialista em análise de conversas e extração de dados estruturados. Retorne APENAS JSON válido, sem formatação markdown, sem blocos de código, sem explicações.' 
+          },
           { role: 'user', content: analysisPrompt }
         ],
         temperature: 0.1,
@@ -86,13 +137,37 @@ Retorne APENAS um JSON válido no formato:
 
     let extractedData;
     try {
-      extractedData = JSON.parse(extractedDataText);
+      extractedData = extractAndCleanJSON(extractedDataText);
+      console.log('✅ JSON parse bem-sucedido:', extractedData);
     } catch (parseError) {
       console.error('❌ Erro ao fazer parse do JSON:', parseError);
-      throw new Error('Falha ao processar dados extraídos');
+      console.error('❌ Texto original:', extractedDataText);
+      
+      // Fallback: criar estrutura básica com dados que conseguimos extrair manualmente
+      const fallbackData = {
+        user_name: null,
+        user_whatsapp: null,
+        company_name: null,
+        slogan: null,
+        mission: null,
+        vision: null,
+        values: null,
+        description: null,
+        differentials: null,
+        products_services: null,
+        target_audience: null,
+        social_proof: null,
+        design_preferences: null,
+        contact_info: null,
+        website_objective: null,
+        additional_info: `Erro no parse automático. Dados brutos: ${extractedDataText.substring(0, 500)}...`
+      };
+      
+      console.log('🔄 Usando dados de fallback:', fallbackData);
+      extractedData = fallbackData;
     }
 
-    console.log('✅ Dados estruturados:', extractedData);
+    console.log('✅ Dados estruturados finais:', extractedData);
 
     return new Response(JSON.stringify({ 
       success: true, 

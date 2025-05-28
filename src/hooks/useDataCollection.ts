@@ -180,6 +180,12 @@ export const useDataCollection = (sessionId: string) => {
         hasAudio: !!msg.audioBlob
       }));
 
+      console.log('📊 Enviando para análise:', {
+        sessionId,
+        messagesCount: historico.length,
+        timestamp: new Date().toISOString()
+      });
+
       const { data: responseData, error } = await supabase.functions.invoke('analyze-conversation', {
         body: {
           historico_conversa: historico,
@@ -187,18 +193,48 @@ export const useDataCollection = (sessionId: string) => {
         }
       });
 
-      if (error) throw new Error(`Erro na análise: ${error.message}`);
-      if (!responseData.success) throw new Error(responseData.error || 'Erro na análise');
+      if (error) {
+        console.error('❌ Erro na Edge Function:', error);
+        throw new Error(`Erro na análise: ${error.message}`);
+      }
+      
+      if (!responseData.success) {
+        console.error('❌ Edge Function retornou erro:', responseData.error);
+        throw new Error(responseData.error || 'Erro na análise');
+      }
+
+      console.log('✅ Dados analisados pela IA:', responseData.data);
+
+      // Limpar e formatar dados antes de salvar
+      const cleanedData = {
+        user_name: responseData.data.user_name || null,
+        user_whatsapp: responseData.data.user_whatsapp ? 
+          responseData.data.user_whatsapp.replace(/[^\d]/g, '') : null,
+        company_name: responseData.data.company_name || null,
+        slogan: responseData.data.slogan || null,
+        mission: responseData.data.mission || null,
+        vision: responseData.data.vision || null,
+        values: responseData.data.values || null,
+        description: responseData.data.description || null,
+        differentials: responseData.data.differentials || null,
+        products_services: responseData.data.products_services || null,
+        target_audience: responseData.data.target_audience || null,
+        social_proof: responseData.data.social_proof || null,
+        design_preferences: responseData.data.design_preferences || null,
+        contact_info: responseData.data.contact_info || null,
+        website_objective: responseData.data.website_objective || null,
+        additional_info: responseData.data.additional_info || null
+      };
 
       const finalData = {
         ...collectedData,
-        ...responseData.data,
+        ...cleanedData,
         historico_conversa: historico,
         conversation_log: historico,
         status: 'completed' as const
       };
 
-      console.log('✅ Análise final concluída:', finalData);
+      console.log('✅ Dados finais para salvar:', finalData);
       
       await saveDataToSupabase(finalData);
       setCollectedData(finalData);
@@ -206,6 +242,28 @@ export const useDataCollection = (sessionId: string) => {
       return finalData;
     } catch (error) {
       console.error('❌ Erro na análise final:', error);
+      
+      // Em caso de erro, ainda salva o histórico básico
+      const fallbackData = {
+        ...collectedData,
+        historico_conversa: messages.map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp.toISOString(),
+          files: msg.files?.map(f => f.name) || [],
+          hasAudio: !!msg.audioBlob
+        })),
+        status: 'completed' as const,
+        additional_info: `Erro na análise automática: ${error.message}`
+      };
+      
+      try {
+        await saveDataToSupabase(fallbackData);
+        setCollectedData(fallbackData);
+      } catch (saveError) {
+        console.error('❌ Erro ao salvar dados de fallback:', saveError);
+      }
+      
       throw error;
     }
   };
