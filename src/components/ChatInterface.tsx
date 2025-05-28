@@ -44,6 +44,7 @@ interface CollectedData {
   additional_info?: string;
   uploaded_files?: string[];
   conversation_log: any[];
+  historico_conversa?: any[];
   status: 'in_progress' | 'completed';
   created_at: string;
 }
@@ -64,6 +65,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     status: 'in_progress',
     created_at: new Date().toISOString(),
     conversation_log: [],
+    historico_conversa: [],
     uploaded_files: []
   });
   const [currentProgress, setCurrentProgress] = useState(0);
@@ -97,7 +99,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       } else {
         const initialMessage: Message = {
           id: '1',
-          content: `Olá! Sou a assistente virtual da **Planner** e estou aqui para te ajudar a criar um site institucional incrível! 🚀
+          content: `Olá! Sou a **Sophia**, assistente virtual da **Planner** e estou aqui para te ajudar a criar um site institucional incrível! 🚀
 
 Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
 
@@ -123,7 +125,7 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
     }
   }, [messages, collectedData, currentProgress, isInitialized]);
 
-  // Sistema de prompt atualizado com nome Sophia e informações sobre logo e domínio
+  // Sistema de prompt atualizado com nome Sophia
   const systemPrompt = `Você é Sophia, uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
 
 SOBRE A PLANNER:
@@ -172,6 +174,57 @@ INSTRUÇÕES IMPORTANTES:
 - Se apresente como Sophia da Planner
 
 FINALIZE APENAS com: "Perfeito! Consegui todas as informações que precisava. Agora gostaria de saber como foi nossa conversa para você. Pode avaliar nosso atendimento? ⭐"`;
+
+  // Função melhorada para salvar dados no banco IMEDIATAMENTE
+  const saveDataToSupabase = async (data: Partial<CollectedData>) => {
+    try {
+      console.log('🔄 SALVANDO DADOS IMEDIATAMENTE NO SUPABASE:', {
+        session_id: data.session_id,
+        user_name: data.user_name,
+        user_whatsapp: data.user_whatsapp,
+        company_name: data.company_name,
+        historico_length: data.historico_conversa?.length || 0
+      });
+
+      const { error } = await supabase
+        .from('client_briefings')
+        .upsert({
+          session_id: data.session_id,
+          user_name: data.user_name,
+          user_whatsapp: data.user_whatsapp,
+          company_name: data.company_name,
+          slogan: data.slogan,
+          mission: data.mission,
+          vision: data.vision,
+          values: data.values,
+          description: data.description,
+          differentials: data.differentials,
+          products_services: data.products_services,
+          target_audience: data.target_audience,
+          social_proof: data.social_proof,
+          design_preferences: data.design_preferences,
+          contact_info: data.contact_info,
+          website_objective: data.website_objective,
+          additional_info: data.additional_info,
+          uploaded_files: data.uploaded_files,
+          conversation_log: data.conversation_log,
+          historico_conversa: data.historico_conversa,
+          status: data.status,
+          created_at: data.created_at,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('❌ ERRO CRÍTICO AO SALVAR:', error);
+        throw error;
+      } else {
+        console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!');
+      }
+    } catch (error) {
+      console.error('❌ ERRO DE CONEXÃO COM BANCO:', error);
+      throw error;
+    }
+  };
 
   // Função melhorada para extrair e salvar dados
   const extractAndSaveData = async (content: string, existingData: Partial<CollectedData>, messages: Message[]): Promise<Partial<CollectedData>> => {
@@ -393,45 +446,6 @@ FINALIZE APENAS com: "Perfeito! Consegui todas as informações que precisava. A
     console.log('Dados atualizados:', updatedData);
     return updatedData;
   };
-  const saveDataToSupabase = async (data: Partial<CollectedData>) => {
-    try {
-      console.log('Salvando dados no Supabase:', data);
-      const {
-        error
-      } = await supabase.from('client_briefings').upsert({
-        session_id: data.session_id,
-        user_name: data.user_name,
-        user_whatsapp: data.user_whatsapp,
-        company_name: data.company_name,
-        slogan: data.slogan,
-        mission: data.mission,
-        vision: data.vision,
-        values: data.values,
-        description: data.description,
-        differentials: data.differentials,
-        products_services: data.products_services,
-        target_audience: data.target_audience,
-        social_proof: data.social_proof,
-        design_preferences: data.design_preferences,
-        contact_info: data.contact_info,
-        website_objective: data.website_objective,
-        additional_info: data.additional_info,
-        uploaded_files: data.uploaded_files,
-        conversation_log: data.conversation_log,
-        historico_conversa: data.historico_conversa,
-        status: data.status,
-        created_at: data.created_at,
-        updated_at: new Date().toISOString()
-      });
-      if (error) {
-        console.error('Erro ao salvar no Supabase:', error);
-      } else {
-        console.log('Dados salvos com sucesso no Supabase');
-      }
-    } catch (error) {
-      console.error('Erro na conexão com Supabase:', error);
-    }
-  };
   const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     try {
       const arrayBuffer = await audioBlob.arrayBuffer();
@@ -631,18 +645,18 @@ Tenha um excelente dia! 🚀✨`,
     );
   }
   return (
-    <div className="h-full flex flex-col max-w-full overflow-hidden">
+    <div className="h-full flex flex-col w-full max-w-full overflow-hidden">
       {/* Barra de Progresso - Apenas Desktop */}
-      <div className="hidden md:block bg-white/95 backdrop-blur-sm border-b border-gray-200/50 p-3 md:p-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="hidden md:block bg-white/95 backdrop-blur-sm border-b border-gray-200/50 p-3 md:p-4 w-full">
+        <div className="max-w-4xl mx-auto w-full">
           <ProgressBar currentProgress={currentProgress} isCompact={false} />
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-3 md:p-4 min-h-0 max-w-full">
-        <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto">
+      <ScrollArea className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full">
+        <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto w-full">
           {messages.map((message) => (
-            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} max-w-full`}>
+            <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
               <Card className={`max-w-[85%] md:max-w-[80%] p-3 md:p-4 break-words overflow-hidden ${
                 message.role === 'user' 
                   ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
@@ -679,7 +693,7 @@ Tenha um excelente dia! 🚀✨`,
 
           {/* Sistema de Avaliação */}
           {isEvaluating && (
-            <div className="flex justify-start max-w-full">
+            <div className="flex justify-start w-full">
               <Card className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 max-w-[85%] md:max-w-[80%]">
                 <h3 className="font-semibold text-gray-800 mb-3">Como foi nossa conversa?</h3>
                 <div className="flex gap-2 mb-4">
@@ -728,8 +742,8 @@ Tenha um excelente dia! 🚀✨`,
       </ScrollArea>
 
       {isCompleted && (
-        <div className="p-3 md:p-4 bg-green-50 border-t border-green-200 flex-shrink-0">
-          <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto">
+        <div className="p-3 md:p-4 bg-green-50 border-t border-green-200 flex-shrink-0 w-full">
+          <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto w-full">
             <CheckCircle2 className="w-5 h-5" />
             <span className="font-medium text-sm md:text-base">
               Briefing finalizado! Dados salvos com sucesso (ID: {sessionId})
@@ -739,7 +753,7 @@ Tenha um excelente dia! 🚀✨`,
       )}
 
       {/* Barra de envio - Largura fixa para mobile */}
-      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0 w-full max-w-full">
+      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0 w-full">
         <div className="max-w-4xl mx-auto w-full">
           {files.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
