@@ -123,8 +123,22 @@ Vamos começar nossa conversa de forma natural. Para iniciar, preciso saber:
     }
   }, [messages, collectedData, currentBlock, isInitialized]);
 
-  // Updated system prompt with mandatory name and WhatsApp collection
+  // Updated system prompt with mandatory name and WhatsApp collection and enhanced knowledge base
   const systemPrompt = `Você é uma agente especializada da empresa "Planner", responsável por conduzir uma conversa acolhedora, natural e humanizada para coletar informações detalhadas sobre a empresa do cliente, visando o desenvolvimento de um site institucional onepage.
+
+SOBRE A PLANNER:
+A Planner é uma empresa de Gestão Inteligente de Negócios, especializada na análise e otimização de processos por meio de organização estratégica e soluções tecnológicas personalizadas. Unimos experiência prática em gestão com inovação digital, atuando de forma integrada nos setores público e privado.
+
+NOSSOS SERVIÇOS:
+- Funcionários Digitais com IA (atendimentos SDR, Suporte Técnico, SAC, Secretária de Agendamentos)
+- Consultoria Estratégica: redesenho de processos operacionais e organizacionais
+- Sistemas sob Medida: desenvolvimento de soluções low-code e aplicativos personalizados
+- Gestão Pública: sistemas específicos para Secretarias de Educação
+- Treinamentos e Palestras: formação de equipes e capacitação de líderes
+- Soluções Integradas: gestão, engenharia, jurídico, contábil e TI
+
+SEGURANÇA E PRIVACIDADE:
+Todas as informações coletadas são protegidas conforme a LGPD. Coletamos dados com consentimento expresso, utilizamos apenas para desenvolvimento do projeto, implementamos medidas de segurança adequadas e não compartilhamos com terceiros sem autorização. Você tem direito ao acesso, correção, exclusão e portabilidade dos seus dados.
 
 REGRA FUNDAMENTAL - INFORMAÇÕES OBRIGATÓRIAS PRIMEIRO:
 - O PROCESSO SÓ DEVE INICIAR se o usuário fornecer NOME COMPLETO e NÚMERO DO WHATSAPP (com DDD)
@@ -137,10 +151,6 @@ ESTRATÉGIA DE PERGUNTAS ABERTAS:
 - Se o usuário fornecer informações que respondem várias perguntas futuras, colete todas automaticamente
 - NÃO repita perguntas sobre informações já fornecidas
 - Seja estratégica: uma pergunta bem feita pode coletar informações de vários blocos
-
-EXEMPLO DE PERGUNTA ESTRATÉGICA:
-❌ Ruim: "Qual é o nome da sua empresa?"
-✅ Bom: "Conte-me sobre sua empresa - qual o nome, o que vocês fazem, há quanto tempo estão no mercado e qual é a missão de vocês?"
 
 INSTRUÇÕES IMPORTANTES:
 - Seja sempre empática, natural e conversacional
@@ -209,6 +219,77 @@ FINALIZE com: "Perfeito! Consegui todas as informações que precisava. Agora go
     }
     
     return uploadedUrls;
+  };
+
+  // Enhanced data extraction function
+  const extractDataFromContent = (content: string, existingData: Partial<CollectedData>) => {
+    const updatedData = { ...existingData };
+    const lowerContent = content.toLowerCase();
+
+    // Extrair nome (procurar por padrões comuns)
+    if (!updatedData.user_name) {
+      const namePatterns = [
+        /(?:meu nome é|me chamo|sou o|sou a|eu sou)\s+([A-Za-zÀ-ÿ\s]{2,30})/i,
+        /^([A-Za-zÀ-ÿ]{2,}\s+[A-Za-zÀ-ÿ\s]{1,28})$/i
+      ];
+      
+      for (const pattern of namePatterns) {
+        const match = content.match(pattern);
+        if (match) {
+          updatedData.user_name = match[1].trim();
+          break;
+        }
+      }
+    }
+
+    // Extrair WhatsApp
+    if (!updatedData.user_whatsapp) {
+      const whatsappPatterns = [
+        /(?:whatsapp|telefone|celular|número).*?(\d{2}\s?\d{4,5}[-\s]?\d{4})/i,
+        /(\d{2}\s?\d{4,5}[-\s]?\d{4})/
+      ];
+      
+      for (const pattern of whatsappPatterns) {
+        const match = content.match(pattern);
+        if (match) {
+          updatedData.user_whatsapp = match[1].replace(/[-\s]/g, '');
+          break;
+        }
+      }
+    }
+
+    // Extrair nome da empresa
+    if (!updatedData.company_name && (lowerContent.includes('empresa') || lowerContent.includes('negócio'))) {
+      const companyPatterns = [
+        /(?:empresa|negócio|companhia)\s+(?:se chama|é|chamada?)\s+([A-Za-zÀ-ÿ\s&]{2,50})/i,
+        /([A-Za-zÀ-ÿ\s&]{2,50})\s+(?:é o nome|é nossa empresa)/i
+      ];
+      
+      for (const pattern of companyPatterns) {
+        const match = content.match(pattern);
+        if (match) {
+          updatedData.company_name = match[1].trim();
+          break;
+        }
+      }
+    }
+
+    // Extrair missão
+    if (!updatedData.mission && lowerContent.includes('missão')) {
+      const missionMatch = content.match(/missão[^.]*[:.]\s*([^.]{10,200})/i);
+      if (missionMatch) {
+        updatedData.mission = missionMatch[1].trim();
+      }
+    }
+
+    // Extrair descrição do negócio
+    if (!updatedData.description && (lowerContent.includes('fazemos') || lowerContent.includes('trabalhamos'))) {
+      if (content.length > 20 && content.length < 500) {
+        updatedData.description = content;
+      }
+    }
+
+    return updatedData;
   };
 
   const saveDataToSupabase = async (data: Partial<CollectedData>) => {
@@ -346,9 +427,12 @@ Tenha um excelente dia! 🚀✨`,
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     
-    // Atualizar dados coletados com arquivos
+    // Extrair dados da mensagem do usuário antes de salvar
+    const extractedData = extractDataFromContent(textToSend, collectedData);
+    
+    // Atualizar dados coletados com arquivos e dados extraídos
     const updatedData = {
-      ...collectedData,
+      ...extractedData,
       uploaded_files: [...(collectedData.uploaded_files || []), ...uploadedFileUrls],
       conversation_log: updatedMessages.map(msg => ({
         role: msg.role,
@@ -432,7 +516,7 @@ Tenha um excelente dia! 🚀✨`,
         await saveDataToSupabase(finalData);
         onDataCollected(finalData);
       } else {
-        // Salvar progresso da conversa
+        // Salvar progresso da conversa com dados extraídos
         const progressData = {
           ...updatedData,
           conversation_log: finalMessages.map(msg => ({
@@ -493,11 +577,11 @@ Tenha um excelente dia! 🚀✨`,
   return (
     <div className="h-full flex flex-col">
       {/* Barra de Progresso - Apenas Desktop */}
-      <div className="hidden md:block p-3 md:p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50">
+      <div className="hidden md:block p-3 md:p-4 border-b bg-gradient-to-r from-slate-50 to-purple-50 flex-shrink-0">
         <ProgressBar currentBlock={currentBlock} totalBlocks={totalBlocks} />
       </div>
 
-      <ScrollArea className="flex-1 p-3 md:p-4">
+      <ScrollArea className="flex-1 p-3 md:p-4 min-h-0">
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto">
           {messages.map((message) => (
             <div
@@ -598,7 +682,7 @@ Tenha um excelente dia! 🚀✨`,
       </ScrollArea>
 
       {isCompleted && (
-        <div className="p-3 md:p-4 bg-green-50 border-t border-green-200">
+        <div className="p-3 md:p-4 bg-green-50 border-t border-green-200 flex-shrink-0">
           <div className="flex items-center gap-2 text-green-800 max-w-4xl mx-auto">
             <CheckCircle2 className="w-5 h-5" />
             <span className="font-medium text-sm md:text-base">
@@ -608,8 +692,8 @@ Tenha um excelente dia! 🚀✨`,
         </div>
       )}
 
-      {/* Barra de envio - Ajustada para mobile */}
-      <div className="border-t bg-white p-3 md:p-4 relative z-10">
+      {/* Barra de envio - Ajustada para mobile sem scroll */}
+      <div className="border-t bg-white p-3 md:p-4 relative z-10 flex-shrink-0">
         <div className="max-w-4xl mx-auto">
           {files.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
@@ -635,7 +719,7 @@ Tenha um excelente dia! 🚀✨`,
               <Upload className="w-4 h-4" />
             </Button>
             
-            <AudioRecorder onAudioRecorded={handleAudioRecorded} disabled={isCompleted || isEvaluating} />
+            <AudioRecorder onAudioRecorded={handleAudioRecorded} />
             
             <Input
               ref={fileInputRef}

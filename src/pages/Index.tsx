@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ChatInterface from '@/components/ChatInterface';
 import MobileCarousel from '@/components/MobileCarousel';
@@ -6,13 +7,16 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Building2, Sparkles, CheckCircle2, X, ArrowRight } from 'lucide-react';
 import ProgressBar from '@/components/ProgressBar';
+
 const Index = () => {
   const [chatStarted, setChatStarted] = useState(false);
   const [collectedData, setCollectedData] = useState(null);
+
   const handleDataCollected = (data: any) => {
     setCollectedData(data);
     console.log('Dados coletados:', data);
   };
+
   if (!chatStarted) {
     return <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
         {/* Background Elements */}
@@ -22,14 +26,14 @@ const Index = () => {
         <div className="container mx-auto px-4 py-8 md:py-16 relative z-10">
           {/* Header */}
           <div className="text-center mb-12 md:mb-20">
-            <div className="flex items-center justify-center gap-3 mb-8">
-              <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-14 md:h-20 w-auto drop-shadow-lg" />
+            <div className="flex items-center justify-center gap-3 mb-12">
+              <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-16 md:h-24 w-auto drop-shadow-lg" />
             </div>
             
             {/* Main Headlines with Premium Typography */}
-            <div className="relative max-w-5xl mx-auto">
-              <div className="space-y-6">
-                <h1 className="text-4xl font-light text-gray-900 leading-[1.1] tracking-tight md:text-6xl">
+            <div className="relative max-w-6xl mx-auto">
+              <div className="space-y-8">
+                <h1 className="text-4xl font-light text-gray-900 leading-[1.1] tracking-tight md:text-7xl">
                   Vamos criar o{' '}
                   <span className="relative inline-block">
                     <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 bg-clip-text text-transparent font-medium">website</span>
@@ -37,7 +41,7 @@ const Index = () => {
                   </span>
                 </h1>
                 
-                <h2 className="text-4xl font-extralight text-gray-800 leading-[1.1] tracking-tight my-[8px] md:text-6xl">
+                <h2 className="text-4xl font-extralight text-gray-800 leading-[1.1] tracking-tight md:text-7xl">
                   perfeito para sua{' '}
                   <span className="font-medium text-gray-900">empresa</span>
                 </h2>
@@ -48,9 +52,9 @@ const Index = () => {
               <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-gradient-to-br from-indigo-200/30 to-purple-200/30 rounded-full blur-2xl"></div>
             </div>
             
-            {/* Subtitle with Modern Typography */}
-            <div className="mt-12 max-w-4xl py-0 mx my-[34px] mx-[54px]">
-              <p className="text-gray-600 leading-relaxed font-light md:text-xl my-[5px] text-center px-[2px] py-0 mx-[-26px] text-base">
+            {/* Subtitle with Modern Typography - CORRIGIDO CENTRALIZAÇÃO */}
+            <div className="mt-16 max-w-5xl mx-auto text-center">
+              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed font-light mb-2">
                 Nossa{' '}
                 <span className="relative">
                   <span className="font-medium text-gray-800">assistente virtual inteligente</span>
@@ -65,7 +69,7 @@ const Index = () => {
               </p>
               
               {/* Subtle decorative line */}
-              <div className="mt-8 flex justify-center">
+              <div className="mt-12 flex justify-center">
                 <div className="w-32 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
               </div>
             </div>
@@ -73,31 +77,31 @@ const Index = () => {
 
           {/* Main CTA Card */}
           <div className="text-center max-w-3xl mx-auto mb-16 px-4">
-            <Card className="p-8 md:p-12 bg-white/90 backdrop-blur-md border-0 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-500 relative overflow-hidden py-[25px] my-[-34px]">
+            <Card className="p-10 md:p-14 bg-white/90 backdrop-blur-md border-0 shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.12)] transition-all duration-500 relative overflow-hidden">
               {/* Card Background Pattern */}
               <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50/50 to-purple-50/30 pointer-events-none"></div>
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-blue-50 to-transparent rounded-full opacity-60"></div>
               
               <div className="relative z-10">
-                <div className="mb-6 py-0 my-0">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl mb-6 shadow-lg">
-                    <MessageSquare className="w-8 h-8 text-white" />
+                <div className="mb-8">
+                  <div className="inline-flex items-center justify-center w-18 h-18 bg-gradient-to-br from-purple-500 to-blue-500 rounded-2xl mb-8 shadow-lg">
+                    <MessageSquare className="w-10 h-10 text-white" />
                   </div>
                 </div>
                 
-                <h3 className="text-2xl font-light text-gray-900 mb-4 tracking-tight md:text-2xl my-[-25px]">
+                <h3 className="text-3xl md:text-4xl font-light text-gray-900 mb-6 tracking-tight">
                   Pronto para <span className="font-medium">começar</span>?
                 </h3>
                 
-                <p className="text-gray-600 mb-8 leading-relaxed font-light max-w-2xl mx-auto text-sm">
+                <p className="text-lg md:text-xl text-gray-600 mb-10 leading-relaxed font-light max-w-2xl mx-auto">
                   O processo leva cerca de <span className="font-medium text-gray-800">10-15 minutos</span> e você pode enviar arquivos como 
                   logo, fotos e outros materiais durante a conversa.
                 </p>
                 
-                <Button onClick={() => setChatStarted(true)} size="lg" className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-8 md:px-12 py-4 text-lg font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group">
-                  <MessageSquare className="w-5 h-5 mr-3 group-hover:scale-110 transition-transform" />
+                <Button onClick={() => setChatStarted(true)} size="lg" className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 text-white px-10 md:px-16 py-5 text-xl font-medium rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 w-full md:w-auto hover:scale-105 group">
+                  <MessageSquare className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
                   Iniciar Conversa
-                  <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="w-6 h-6 ml-3 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
             </Card>
@@ -145,8 +149,8 @@ const Index = () => {
           </div>
 
           {/* Footer */}
-          <div className="text-center mt-16 text-gray-500 px-4">
-            <p className="text-sm md:text-base mb-3 font-light">© 2024 Planner - Criamos experiências digitais excepcionais</p>
+          <div className="text-center mt-20 text-gray-500 px-4">
+            <p className="text-sm md:text-base mb-4 font-light">© 2024 Planner - Criamos experiências digitais excepcionais</p>
             <PrivacyPolicyModal>
               <button className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors font-light">
                 Política de Privacidade
@@ -156,9 +160,10 @@ const Index = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+
+  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex flex-col h-screen md:h-auto">
       {/* Header do chat */}
-      <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 md:p-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white/90 backdrop-blur-md border-b border-gray-200/50 p-3 md:p-4 sticky top-0 z-10 shadow-sm flex-shrink-0">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-3 flex-1">
             <img src="/lovable-uploads/5c0ccf07-d389-4d69-994b-f9cc7ceffa39.png" alt="Planner Logo" className="h-8 md:h-10 w-auto flex-shrink-0" />
@@ -182,10 +187,11 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Interface do chat - Ajustada para mobile */}
-      <div className="h-[calc(100vh-60px)] md:h-[calc(100vh-80px)] pb-safe">
+      {/* Interface do chat - Ajustada para mobile sem scroll externo */}
+      <div className="flex-1 min-h-0">
         <ChatInterface onDataCollected={handleDataCollected} />
       </div>
     </div>;
 };
+
 export default Index;
