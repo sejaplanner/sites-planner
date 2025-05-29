@@ -46,10 +46,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     setIsCompleted,
     isEvaluating,
     setIsEvaluating,
-    evaluation,
-    setEvaluation,
-    evaluationComment,
-    setEvaluationComment,
     isInitialized,
     setIsInitialized
   } = useChatState(sessionId);
@@ -92,10 +88,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   }, [isEvaluating]);
 
-  // Implementar auto-focus após envio de mensagem
   useEffect(() => {
     if (!isLoading && keyboardState.isInputFocused && inputRef.current) {
-      // Pequeno delay para garantir que a mensagem foi enviada
       const timer = setTimeout(() => {
         if (inputRef.current && !isCompleted && !isEvaluating) {
           focusInput();
@@ -105,7 +99,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   }, [isLoading, messages.length, keyboardState.isInputFocused, isCompleted, isEvaluating]);
 
-  // Handle click fora do input para fechar teclado
   const handleChatAreaClick = (e: React.MouseEvent) => {
     if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
       blurInput();
@@ -169,7 +162,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   }, [messages, collectedData, isInitialized, sessionReady, sessionId]);
 
-  // ... keep existing code (uploadFilesToSupabase method)
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
     for (const file of files) {
@@ -235,17 +227,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   };
 
-  // ... keep existing code (handleEvaluationSubmit and handleSendMessage methods remain the same)
-
-  const handleEvaluationSubmit = async () => {
-    if (evaluation === 0) return;
-    
+  const handleEvaluationSubmit = async (evaluationText: string) => {
     try {
-      await saveEvaluation(evaluation, evaluationComment);
+      console.log('💾 Salvando avaliação:', evaluationText);
+      await saveEvaluation(evaluationText);
       
       const finalMessage: Message = {
         id: (Date.now() + 2).toString(),
-        content: "Muito obrigada pela sua avaliação" + (evaluation >= 4 ? " excelente" : "") + "! " + (evaluationComment ? "Suas sugestões são muito valiosas para nós. " : "") + "\n\n🎉 **Briefing Finalizado com Sucesso!**\n\nNossa equipe da Planner entrará em contato em breve através do WhatsApp informado para dar continuidade ao desenvolvimento do seu site institucional.\n\nTenha um excelente dia! 🚀✨",
+        content: "Muito obrigada pela sua avaliação! Suas palavras são muito valiosas para nós.\n\n🎉 **Briefing Finalizado com Sucesso!**\n\nNossa equipe da Planner entrará em contato em breve através do WhatsApp informado para dar continuidade ao desenvolvimento do seu site institucional.\n\nTenha um excelente dia! 🚀✨",
         role: 'assistant',
         timestamp: new Date()
       };
@@ -266,7 +255,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     const filesToSend = messageFiles || files;
     if (!textToSend.trim() && filesToSend.length === 0 && !audioBlob) return;
 
-    // Validação crítica do session_id antes de enviar
     if (!validateSessionId(sessionId)) {
       console.error('❌ Session ID inválido ao enviar mensagem:', sessionId);
       return;
@@ -421,18 +409,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   }
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const containerStyle = isMobile ? {
-    paddingBottom: keyboardState.isOpen ? `${Math.max(keyboardState.height + 20, 300)}px` : '100px',
-    transition: 'padding-bottom 0.3s ease-in-out'
-  } : {};
 
   return (
     <div className="h-full flex flex-col w-full max-w-full overflow-hidden relative">
       <ScrollArea 
-        className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full"
+        className="flex-1 p-3 md:p-4 min-h-0 w-full max-w-full pb-20"
         ref={chatContainerRef}
         onClick={handleChatAreaClick}
-        style={containerStyle}
       >
         <div className="space-y-3 md:space-y-4 max-w-4xl mx-auto w-full">
           {messages.map((message) => (
@@ -473,13 +456,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
 
           {isEvaluating && (
             <div ref={evaluationRef} className="w-full">
-              <EvaluationCard
-                evaluation={evaluation}
-                evaluationComment={evaluationComment}
-                onEvaluationChange={setEvaluation}
-                onCommentChange={setEvaluationComment}
-                onSubmit={handleEvaluationSubmit}
-              />
+              <EvaluationCard onSubmit={handleEvaluationSubmit} />
             </div>
           )}
 
@@ -496,10 +473,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
             </div>
           )}
           
-          <div 
-            ref={messagesEndRef} 
-            className={isEvaluating ? 'h-32 md:h-16' : 'h-4'}
-          />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
       </ScrollArea>
 
@@ -514,15 +488,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
         </div>
       )}
 
-      <div className={`w-full flex-shrink-0 border-t bg-white/95 backdrop-blur-sm relative z-10 ${
-        isMobile 
-          ? `fixed bottom-0 left-0 right-0 z-50 ${keyboardState.isOpen ? 'transform' : ''}` 
-          : 'sticky bottom-0'
-      }`}
-      style={isMobile && keyboardState.isOpen ? {
-        transform: `translateY(-${keyboardState.height}px)`,
-        transition: 'transform 0.3s ease-in-out'
-      } : {}}>
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t">
         <MessageInput
           inputValue={inputValue}
           files={files}

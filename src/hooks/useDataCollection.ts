@@ -23,7 +23,7 @@ interface CollectedData {
   uploaded_files?: string[];
   conversation_log: any[];
   historico_conversa?: any[];
-  user_evaluation?: number;
+  user_evaluation?: string;
   evaluation_comment?: string;
   status: 'in_progress' | 'completed';
   created_at: string;
@@ -73,13 +73,11 @@ export const useDataCollection = (sessionId: string) => {
     const maxRetries = 3;
     const retryDelay = Math.pow(2, retryCount) * 1000;
 
-    // Validação crítica do session_id
     if (!data.session_id || data.session_id.length < 10) {
       console.error('❌ Session ID inválido:', data.session_id);
       throw new Error('Session ID inválido ou ausente');
     }
 
-    // Mutex simples para evitar concorrência
     if (saveMutex) {
       console.log('⚠️ Operação de salvamento já em andamento, aguardando...');
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -97,13 +95,13 @@ export const useDataCollection = (sessionId: string) => {
         user_whatsapp: data.user_whatsapp,
         company_name: data.company_name,
         historico_length: data.historico_conversa?.length || 0,
+        status: data.status,
         isNewSession,
         timestamp: new Date().toISOString()
       });
 
       setIsSaving(true);
 
-      // Usar .maybeSingle() para evitar erros quando não há dados
       const { data: existingData, error: selectError } = await supabase
         .from('client_briefings')
         .select('id, session_id')
@@ -185,12 +183,12 @@ export const useDataCollection = (sessionId: string) => {
         if (error) throw error;
       }
 
-      // Backup local após sucesso
       backupToLocal(data);
 
       console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!', {
         session_id: data.session_id,
         attempt: retryCount + 1,
+        status: data.status,
         timestamp: new Date().toISOString()
       });
 
@@ -202,7 +200,6 @@ export const useDataCollection = (sessionId: string) => {
         timestamp: new Date().toISOString()
       });
       
-      // Backup local em caso de erro
       backupToLocal(data);
       
       if (retryCount < maxRetries) {
@@ -245,13 +242,13 @@ export const useDataCollection = (sessionId: string) => {
     }
   };
 
-  const saveEvaluation = async (evaluation: number, comment: string): Promise<void> => {
-    console.log('💾 Salvando avaliação do usuário:', { evaluation, comment, sessionId });
+  const saveEvaluation = async (evaluationText: string): Promise<void> => {
+    console.log('💾 Salvando avaliação do usuário:', { evaluationText, sessionId });
     
     const updatedData = {
       ...collectedData,
-      user_evaluation: evaluation,
-      evaluation_comment: comment,
+      user_evaluation: evaluationText,
+      evaluation_comment: evaluationText,
       status: 'completed' as const
     };
 
@@ -303,7 +300,6 @@ export const useDataCollection = (sessionId: string) => {
 
       console.log('✅ Dados analisados pela IA:', responseData.data);
 
-      // Limpar e formatar dados antes de salvar
       const cleanedData = {
         user_name: responseData.data.user_name || null,
         user_whatsapp: responseData.data.user_whatsapp ? 
@@ -341,7 +337,6 @@ export const useDataCollection = (sessionId: string) => {
     } catch (error) {
       console.error('❌ Erro na análise final:', error);
       
-      // Em caso de erro, ainda salva o histórico básico
       const fallbackData = {
         ...collectedData,
         historico_conversa: messages.map(msg => ({

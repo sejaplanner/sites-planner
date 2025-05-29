@@ -57,21 +57,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
       setUploadingFiles(imageFiles);
       setUploadProgress(0);
       
-      // Progresso simulado mais realista
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
             clearInterval(progressInterval);
             return 90;
           }
-          return prev + Math.random() * 20;
+          return prev + Math.random() * 30;
         });
-      }, 200);
+      }, 100);
       
       try {
-        // Simular validação de arquivos
         const validFiles = imageFiles.filter(file => {
-          const maxSize = 10 * 1024 * 1024; // 10MB
+          const maxSize = 10 * 1024 * 1024;
           if (file.size > maxSize) {
             console.error('❌ Arquivo muito grande:', file.name);
             return false;
@@ -83,14 +81,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
           throw new Error('Alguns arquivos são muito grandes (máximo 10MB)');
         }
 
-        // Processar arquivos sem delay artificial
         onFileUpload(event);
         setUploadProgress(100);
         
         setTimeout(() => {
           setUploadingFiles([]);
           setUploadProgress(0);
-        }, 300);
+        }, 200);
         
       } catch (error) {
         console.error('❌ Erro no upload:', error);
@@ -104,7 +101,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const canSendMessage = !isLoading && !isCompleted && !isEvaluating && !isUploadingImages && (inputValue.trim() || files.length > 0);
 
   return (
-    <div className="border-t bg-white/95 backdrop-blur-sm p-2 md:p-4 relative z-10 flex-shrink-0 w-full max-w-full">
+    <div className="p-2 md:p-4 w-full max-w-full">
       <div className="max-w-4xl mx-auto w-full">
         {(files.length > 0 || isUploadingImages) && (
           <div className="mb-2 md:mb-3 flex flex-wrap gap-2">
@@ -117,7 +114,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
               />
             ))}
             
-            {/* Loading preview para imagens sendo processadas */}
             {uploadingFiles.map((file, index) => (
               <div key={`uploading-${index}`} className="relative">
                 <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-gray-200 flex items-center justify-center">
@@ -187,7 +183,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
             }
             className="flex-1 text-base min-w-0 h-10 md:h-11 touch-manipulation px-3 md:px-4"
             disabled={isLoading || isCompleted || isEvaluating || isUploadingImages}
-            style={{ fontSize: '16px' }} // Previne zoom no iOS
+            style={{ fontSize: '16px' }}
           />
           
           <Button
@@ -206,7 +202,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
           </Button>
         </div>
         
-        {/* Indicador de upload com progresso real */}
         {isUploadingImages && (
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
             <Loader2 className="w-3 h-3 animate-spin" />
