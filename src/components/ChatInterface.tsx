@@ -19,7 +19,7 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
-  const { sessionId, isInitialized: sessionReady, clearSessionId } = useSessionId();
+  const { sessionId, isInitialized: sessionReady, clearSessionId, validateSessionId } = useSessionId();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const evaluationRef = useRef<HTMLDivElement>(null);
@@ -118,10 +118,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
       persistenceLoading,
       isInitialized,
       sessionId,
+      sessionValid: validateSessionId(sessionId),
       timestamp: new Date().toISOString()
     });
 
-    if (!persistenceLoading && sessionReady && !isInitialized) {
+    if (!persistenceLoading && sessionReady && !isInitialized && validateSessionId(sessionId)) {
       if (persistedData && persistedData.messages && persistedData.messages.length > 1) {
         console.log('🔄 Recuperando sessão persistida:', {
           sessionId: persistedData.sessionId,
@@ -153,7 +154,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
   }, [persistenceLoading, persistedData, isInitialized, sessionReady, sessionId]);
 
   useEffect(() => {
-    if (isInitialized && messages.length > 0 && sessionReady) {
+    if (isInitialized && messages.length > 0 && sessionReady && validateSessionId(sessionId)) {
       console.log('💾 Salvando no localStorage:', {
         sessionId,
         messagesCount: messages.length,
@@ -168,6 +169,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   }, [messages, collectedData, isInitialized, sessionReady, sessionId]);
 
+  // ... keep existing code (uploadFilesToSupabase method)
   const uploadFilesToSupabase = async (files: File[]): Promise<string[]> => {
     const uploadedUrls: string[] = [];
     for (const file of files) {
@@ -233,6 +235,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   };
 
+  // ... keep existing code (handleEvaluationSubmit and handleSendMessage methods remain the same)
+
   const handleEvaluationSubmit = async () => {
     if (evaluation === 0) return;
     
@@ -261,6 +265,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     const textToSend = messageText || inputValue;
     const filesToSend = messageFiles || files;
     if (!textToSend.trim() && filesToSend.length === 0 && !audioBlob) return;
+
+    // Validação crítica do session_id antes de enviar
+    if (!validateSessionId(sessionId)) {
+      console.error('❌ Session ID inválido ao enviar mensagem:', sessionId);
+      return;
+    }
 
     console.log('📤 Enviando mensagem:', {
       sessionId,
@@ -399,7 +409,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
     }
   };
 
-  if (persistenceLoading || !sessionReady) {
+  if (persistenceLoading || !sessionReady || !validateSessionId(sessionId)) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="flex items-center gap-2 text-gray-600">
@@ -412,7 +422,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const containerStyle = isMobile ? {
-    paddingBottom: keyboardState.isOpen ? Math.max(keyboardState.height, 280) + "px" : '0px',
+    paddingBottom: keyboardState.isOpen ? `${Math.max(keyboardState.height + 20, 300)}px` : '100px',
     transition: 'padding-bottom 0.3s ease-in-out'
   } : {};
 
@@ -504,13 +514,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onDataCollected }) => {
         </div>
       )}
 
-      <div className={"w-full flex-shrink-0 border-t bg-white/95 backdrop-blur-sm relative z-10 " + (
+      <div className={`w-full flex-shrink-0 border-t bg-white/95 backdrop-blur-sm relative z-10 ${
         isMobile 
-          ? keyboardState.isOpen 
-            ? 'fixed bottom-0 left-0 right-0 z-50' 
-            : 'fixed bottom-0 left-0 right-0 z-50'
+          ? `fixed bottom-0 left-0 right-0 z-50 ${keyboardState.isOpen ? 'transform' : ''}` 
           : 'sticky bottom-0'
-      )}>
+      }`}
+      style={isMobile && keyboardState.isOpen ? {
+        transform: `translateY(-${keyboardState.height}px)`,
+        transition: 'transform 0.3s ease-in-out'
+      } : {}}>
         <MessageInput
           inputValue={inputValue}
           files={files}

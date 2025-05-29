@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from './useChatState';
@@ -30,6 +29,9 @@ interface CollectedData {
   created_at: string;
 }
 
+// Mutex simples para evitar concorrência
+let saveMutex = false;
+
 const debounce = (func: Function, wait: number) => {
   let timeout: NodeJS.Timeout;
   return function executedFunction(...args: any[]) {
@@ -55,11 +57,40 @@ export const useDataCollection = (sessionId: string) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isNewSession, setIsNewSession] = useState(true);
 
+  const backupToLocal = (data: Partial<CollectedData>) => {
+    try {
+      localStorage.setItem(`backup_${sessionId}`, JSON.stringify({
+        ...data,
+        backupTimestamp: new Date().toISOString()
+      }));
+      console.log('💾 Backup local criado para session:', sessionId);
+    } catch (error) {
+      console.error('❌ Erro ao criar backup local:', error);
+    }
+  };
+
   const saveDataToSupabase = async (data: Partial<CollectedData>, retryCount = 0): Promise<void> => {
     const maxRetries = 3;
     const retryDelay = Math.pow(2, retryCount) * 1000;
 
+    // Validação crítica do session_id
+    if (!data.session_id || data.session_id.length < 10) {
+      console.error('❌ Session ID inválido:', data.session_id);
+      throw new Error('Session ID inválido ou ausente');
+    }
+
+    // Mutex simples para evitar concorrência
+    if (saveMutex) {
+      console.log('⚠️ Operação de salvamento já em andamento, aguardando...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (saveMutex) {
+        console.log('⚠️ Mutex ainda ativo, cancelando operação duplicada');
+        return;
+      }
+    }
+
     try {
+      saveMutex = true;
       console.log(`🔄 TENTATIVA ${retryCount + 1}/${maxRetries} - Salvando dados no Supabase:`, {
         session_id: data.session_id,
         user_name: data.user_name,
@@ -70,22 +101,22 @@ export const useDataCollection = (sessionId: string) => {
         timestamp: new Date().toISOString()
       });
 
-      if (isSaving) {
-        console.log('⚠️ Operação de salvamento já em andamento, pulando...');
-        return;
-      }
-
       setIsSaving(true);
 
-      // Verificar se já existe um registro para este session_id
-      const { data: existingData } = await supabase
+      // Usar .maybeSingle() para evitar erros quando não há dados
+      const { data: existingData, error: selectError } = await supabase
         .from('client_briefings')
         .select('id, session_id')
         .eq('session_id', data.session_id)
-        .single();
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('❌ Erro ao verificar dados existentes:', selectError);
+        throw selectError;
+      }
 
       if (existingData) {
-        console.log('📝 Atualizando registro existente...');
+        console.log('📝 Atualizando registro existente:', existingData.id);
         setIsNewSession(false);
         
         const { error } = await supabase
@@ -154,6 +185,9 @@ export const useDataCollection = (sessionId: string) => {
         if (error) throw error;
       }
 
+      // Backup local após sucesso
+      backupToLocal(data);
+
       console.log('✅ DADOS SALVOS COM SUCESSO NO BANCO!', {
         session_id: data.session_id,
         attempt: retryCount + 1,
@@ -168,6 +202,9 @@ export const useDataCollection = (sessionId: string) => {
         timestamp: new Date().toISOString()
       });
       
+      // Backup local em caso de erro
+      backupToLocal(data);
+      
       if (retryCount < maxRetries) {
         console.log(`🔄 Tentando novamente em ${retryDelay}ms... (tentativa ${retryCount + 2}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
@@ -177,6 +214,7 @@ export const useDataCollection = (sessionId: string) => {
       throw error;
     } finally {
       setIsSaving(false);
+      saveMutex = false;
     }
   };
 

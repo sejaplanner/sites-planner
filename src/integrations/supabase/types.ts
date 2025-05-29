@@ -96,6 +96,72 @@ export type Database = {
         }
         Relationships: []
       }
+      transcripts: {
+        Row: {
+          action_items: Json | null
+          created_at: string | null
+          duration: unknown | null
+          end_time: string | null
+          id: string
+          key_questions: Json | null
+          owner: string | null
+          participants: Json | null
+          participants_count: number | null
+          raw_data: Json | null
+          report_url: string | null
+          session_id: string
+          start_time: string | null
+          summary: string | null
+          title: string | null
+          topics: Json | null
+          transcript: string | null
+          trigger: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_items?: Json | null
+          created_at?: string | null
+          duration?: unknown | null
+          end_time?: string | null
+          id?: string
+          key_questions?: Json | null
+          owner?: string | null
+          participants?: Json | null
+          participants_count?: number | null
+          raw_data?: Json | null
+          report_url?: string | null
+          session_id: string
+          start_time?: string | null
+          summary?: string | null
+          title?: string | null
+          topics?: Json | null
+          transcript?: string | null
+          trigger?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_items?: Json | null
+          created_at?: string | null
+          duration?: unknown | null
+          end_time?: string | null
+          id?: string
+          key_questions?: Json | null
+          owner?: string | null
+          participants?: Json | null
+          participants_count?: number | null
+          raw_data?: Json | null
+          report_url?: string | null
+          session_id?: string
+          start_time?: string | null
+          summary?: string | null
+          title?: string | null
+          topics?: Json | null
+          transcript?: string | null
+          trigger?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

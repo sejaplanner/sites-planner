@@ -23,6 +23,28 @@ export const useKeyboardState = () => {
       initialViewportHeight.current = window.innerHeight;
     }
 
+    const handleVisualViewport = () => {
+      if (typeof window !== 'undefined' && window.visualViewport) {
+        const viewport = window.visualViewport;
+        const currentHeight = viewport.height;
+        const keyboardHeight = window.innerHeight - currentHeight;
+        const isOpen = keyboardHeight > 150;
+        
+        console.log('📱 Keyboard state:', { 
+          isOpen, 
+          keyboardHeight, 
+          windowHeight: window.innerHeight, 
+          viewportHeight: currentHeight 
+        });
+        
+        setKeyboardState(prev => ({
+          ...prev,
+          isOpen: isOpen,
+          height: Math.max(0, keyboardHeight)
+        }));
+      }
+    };
+
     const handleResize = () => {
       if (typeof window === 'undefined') return;
       
@@ -39,31 +61,19 @@ export const useKeyboardState = () => {
       }));
     };
 
-    const handleVisualViewport = () => {
-      if (typeof window !== 'undefined' && window.visualViewport) {
-        const viewport = window.visualViewport;
-        const keyboardHeight = window.innerHeight - viewport.height;
-        const isOpen = keyboardHeight > 150;
-        
-        setKeyboardState(prev => ({
-          ...prev,
-          isOpen: isOpen,
-          height: Math.max(0, keyboardHeight)
-        }));
-      }
-    };
-
-    // Event listeners
-    window.addEventListener('resize', handleResize);
-    
+    // Priorizar visualViewport se disponível (mais confiável)
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleVisualViewport);
+    } else {
+      // Fallback para dispositivos mais antigos
+      window.addEventListener('resize', handleResize);
     }
 
     return () => {
-      window.removeEventListener('resize', handleResize);
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', handleVisualViewport);
+      } else {
+        window.removeEventListener('resize', handleResize);
       }
     };
   }, []);
