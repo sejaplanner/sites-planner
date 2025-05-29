@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Message } from './useChatState';
@@ -23,7 +24,7 @@ interface CollectedData {
   uploaded_files?: string[];
   conversation_log: any[];
   historico_conversa?: any[];
-  user_evaluation?: string;
+  user_evaluation?: number;
   evaluation_comment?: string;
   status: 'in_progress' | 'completed';
   created_at: string;
@@ -247,7 +248,6 @@ export const useDataCollection = (sessionId: string) => {
     
     const updatedData = {
       ...collectedData,
-      user_evaluation: evaluationText,
       evaluation_comment: evaluationText,
       status: 'completed' as const
     };
