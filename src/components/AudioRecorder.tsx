@@ -1,8 +1,8 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { Mic, Square, Send, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useAudioRecording } from '@/hooks/useAudioRecording';
 
 interface AudioRecorderProps {
   onAudioRecorded: (audioBlob: Blob) => void;
@@ -10,134 +10,24 @@ interface AudioRecorderProps {
 }
 
 const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled = false }) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [hasError, setHasError] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const { toast } = useToast();
-
-  const startRecording = async () => {
-    if (disabled) return;
-    
-    try {
-      setHasError(false);
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          sampleRate: 44100,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      streamRef.current = stream;
-      
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
-      mediaRecorderRef.current = mediaRecorder;
-      
-      const chunks: BlobPart[] = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        setAudioBlob(blob);
-        console.log('🎤 Áudio gravado, tamanho:', blob.size, 'bytes');
-      };
-      
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      // Iniciar contador de tempo
-      intervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error('❌ Erro ao acessar microfone:', error);
-      setHasError(true);
-      toast({
-        title: "Erro no microfone",
-        description: "Não foi possível acessar o microfone. Verifique as permissões.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    }
-  };
-
-  const sendAudio = async () => {
-    if (audioBlob && !isProcessing) {
-      setIsProcessing(true);
-      try {
-        console.log('📤 Tentando enviar áudio...');
-        await onAudioRecorded(audioBlob);
-        // Só limpa o áudio se o envio foi bem-sucedido
-        setAudioBlob(null);
-        setRecordingTime(0);
-        setHasError(false);
-        console.log('✅ Áudio enviado com sucesso');
-      } catch (error) {
-        console.error('❌ Erro ao enviar áudio:', error);
-        setHasError(true);
-        toast({
-          title: "Erro na transcrição",
-          description: "Falha ao processar o áudio. Tente novamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-    }
-  };
-
-  const cancelAudio = () => {
-    setAudioBlob(null);
-    setRecordingTime(0);
-    setHasError(false);
-  };
-
-  const retryAudio = () => {
-    setHasError(false);
-    sendAudio();
-  };
+  const {
+    isRecording,
+    audioBlob,
+    recordingTime,
+    hasError,
+    isProcessing,
+    startRecording,
+    stopRecording,
+    sendAudio,
+    cancelAudio,
+    retryAudio
+  } = useAudioRecording();
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
 
   if (isRecording) {
     return (
@@ -188,7 +78,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
           <Button
             variant="ghost"
             size="icon"
-            onClick={retryAudio}
+            onClick={() => retryAudio(onAudioRecorded)}
             disabled={isProcessing}
             className="h-6 w-6 text-red-600 hover:text-red-700 flex-shrink-0"
             aria-label="Tentar novamente"
@@ -209,7 +99,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onAudioRecorded, disabled
         
         {!hasError && (
           <Button
-            onClick={sendAudio}
+            onClick={() => sendAudio(onAudioRecorded)}
             size="icon"
             disabled={isProcessing}
             className="h-8 w-8 bg-purple-600 hover:bg-purple-700 flex-shrink-0"
