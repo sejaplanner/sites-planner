@@ -128,8 +128,7 @@ export const useDataPersistence = (sessionId: string) => {
         conversation_log: data.conversation_log || [],
         historico_conversa: data.historico_conversa || [],
         evaluation_comment: data.evaluation_comment || null,
-        status: data.status || 'in_progress',
-        updated_at: new Date().toISOString()
+        status: data.status || 'in_progress'
       };
 
       if (existingData) {
@@ -324,8 +323,7 @@ export const useDataPersistence = (sessionId: string) => {
     const dataToSave: Partial<CollectedData> = {
       session_id: sessionId,
       evaluation_comment: evaluationText,
-      status: 'completed',
-      updated_at: new Date().toISOString()
+      status: 'completed'
     };
 
     return await saveToDatabase(dataToSave);
